@@ -1,7 +1,7 @@
 {
-  "name": "image-lib",
+  "name": "image-lib-js",
   "version": "0.0.1",
-  "description": "In image generation library for JavaScript and TypeScript",
+  "description": "A TypeScript based library for pixel based image editing",
   "main": "index.js",
   "scripts": {
     "dev": "parcel src/index.html",
@@ -9,7 +9,7 @@
     "demo": "parcel src/demo/demo.html",
     "editor": "parcel src/demo/editor.html"
   },
-  "author": "",
+  "author": "marverati",
   "license": "ISC",
   "devDependencies": {
     "parcel-bundler": "^1.12.5",
