@@ -13,9 +13,11 @@ type ImageFilter<T> = (value: T, x: number, y: number) => T;
 
 export class ImageLib {
 
-    public static generate(gen: ImageGenerator<Color>, width: number, height = width) {
-
+    public static generate(gen: Colorizable | ImageGenerator<Colorizable>, width: number, height = width) {
+        return new RGBAPixelMap(width, height, gen);
     }
+
+    public static gen = ImageLib.generate;
 
     public static filter() {
 
@@ -172,10 +174,69 @@ export abstract class PixelMap<T> {
     }
 }
 
+export type Colorizable = Color | ColorRGB | number | boolean;
 export class RGBAPixelMap extends PixelMap<Color> {
-    constructor(width: number, height = width, initialValue: Color | ImageGenerator<Color> = [255, 255, 255, 255]) {
-        super(width, height, initialValue);
+    constructor(
+        width: number,
+        height = width,
+        initialValue: Colorizable | ImageGenerator<Colorizable> = [255, 255, 255, 255]
+    ) {
+        if (initialValue instanceof Function) {
+            initialValue = RGBAPixelMap.valueGeneratorToColor(initialValue);
+        } else {
+            initialValue = RGBAPixelMap.valueToColor(initialValue);
+        }
+        super(width, height, initialValue as Color | ImageGenerator<Color>);
     }
+
+    static valueToColor(value: Colorizable): Color {
+        if (value instanceof Array) {
+            if (value.length >= 4) {
+                // Already Color
+                return value as Color;
+            } else {
+                // ColorRGB
+                const result = value.slice();
+                result[3] = 255; // alpha
+                return result as Color;
+            }
+        } else if (typeof value === "number") {
+            // number
+            return [value, value, value, 255];
+        } else {
+            // boolean
+            return value ? [255, 255, 255, 255] : [0, 0, 0, 255];
+        }
+    }
+    
+    static valueGeneratorToColor(gen: ImageGenerator<Colorizable>): ImageGenerator<Color> {
+        const value = gen(0, 0);
+        if (value instanceof Array) {
+            if (value.length >= 4) {
+                // Already Color
+                return gen as ImageGenerator<Color>;
+            } else {
+                // ColorRGB
+                return (x, y) => {
+                    const result = gen(x, y);
+                    result[3] = 255;
+                    return result as Color;
+                };
+            }
+        } else if (typeof value === "number") {
+            // number
+            return (x, y) => {
+                const v = gen(x, y);
+                return [v, v, v, 255] as Color;
+            }
+        } else {
+            // boolean
+            return (x, y) => {
+                return gen(x, y) ? [255, 255, 255, 255] : [0, 0, 0, 255];
+            }
+        }
+    }
+
     public toColor(v: Color): Color { return v; }
     public clone(width = this.width, height = this.height) { return new RGBAPixelMap(width, height, (x, y) => this.data[y][x]); }
     public blend(a: Color, b: Color, f: number): Color {
@@ -211,6 +272,7 @@ export class RGBAPixelMap extends PixelMap<Color> {
         })
     }
 }
+export const ColorMap = RGBAPixelMap;
 
 export class RGBPixelMap extends PixelMap<ColorRGB> {
     constructor(width: number, height = width, initialValue: ColorRGB | ImageGenerator<ColorRGB> = [255, 255, 255]) {

@@ -1,10 +1,12 @@
-import { GrayscalePixelMap, RGBAPixelMap } from "../image-lib"
+import { GrayscalePixelMap, RGBAPixelMap, ColorMap, PixelMap } from "../image-lib"
 import { exposeToWindow } from "./util";
 import { examples } from "./examples";
 
 let editor: HTMLTextAreaElement;
 let canvas: HTMLCanvasElement;
 let context: CanvasRenderingContext2D;
+
+// TODO: provide gen and filter in window scope
 
 window.addEventListener('load', () => {
     editor = document.getElementById("editor-text") as HTMLTextAreaElement;
@@ -16,7 +18,8 @@ window.addEventListener('load', () => {
         canvas,
         context,
         GrayscalePixelMap,
-        RGBAPixelMap
+        RGBAPixelMap,
+        ColorMap,
     })
 
     addExamples();
@@ -57,7 +60,8 @@ function runCode() {
     try {
         prepareWindowScope();
         const fnc = new Function(code);
-        const result = fnc();
+        const codeResult = fnc();
+        const result = codeResult instanceof PixelMap ? codeResult.toImage() : codeResult;
         if (result) {
             // Render result into preview canvas if necessary
             if (result instanceof Image || (result instanceof HTMLCanvasElement && result !== canvas)) {
