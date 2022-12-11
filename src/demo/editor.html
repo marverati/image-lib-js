@@ -39,11 +39,17 @@
             filter: blur(2px)
         }
 
+        .checkerboard {
+            background: repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 32px 32px;
+            background-position-x: left;
+            background-position-y: top;
+        }
+
     </style>
 </head>
 <body>
     <h1>ImageLibJS Editor</h1>
-    <canvas id="editor-canvas" width="1024" height="512"></canvas>
+    <canvas id="editor-canvas" class="checkerboard" width="1024" height="512"></canvas>
     <textarea id="editor-text"></textarea>
     <div id="example-container"></div>
 </body>
