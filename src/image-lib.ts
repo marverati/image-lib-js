@@ -1,13 +1,13 @@
 
 
-type Color = [number, number, number, number];
-type ColorRGB = [number, number, number];
+export type Color = [number, number, number, number];
+export type ColorRGB = [number, number, number];
 
-type PixelProcessor<T> = (x: number, y: number, value: T) => void;
+export type PixelProcessor<T> = (x: number, y: number, value: T) => void;
 
-type ImageGenerator<T> = (x: number, y: number) => T;
+export type ImageGenerator<T> = (x: number, y: number) => T;
 
-type ImageFilter<T> = (value: T, x: number, y: number) => T;
+export type ImageFilter<T> = (value: T, x: number, y: number) => T;
 
 
 
