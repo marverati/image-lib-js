@@ -1,4 +1,4 @@
-import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Color, PixelMap, Colorizable, ImageGenerator, ImageFilter } from "../image-lib";
+import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Color, PixelMap, Colorizable, ImageGenerator, ImageFilter, ImageChannelFilter } from "../image-lib";
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
 import { exposeToWindow } from "./util";
 import { examples } from "./examples";
@@ -22,6 +22,10 @@ window.addEventListener('load', () => {
         generate,
         gen: generate,
         filter,
+        filterR,
+        filterG,
+        filterB,
+        filterA,
         applyImage: renderToPreview,
         perlin2D,
         fractalPerlin2D,
@@ -42,6 +46,30 @@ function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = canvas
 
 function filter(filterFunc: ImageFilter<Color>, map = previewToPixelmap()) {
     map.filter(filterFunc);
+    renderToPreview(map);
+    return map;
+}
+
+function filterR(filter: ImageChannelFilter, map = previewToPixelmap()) {
+    map.filterR(filter);
+    renderToPreview(map);
+    return map;
+}
+
+function filterG(filter: ImageChannelFilter, map = previewToPixelmap()) {
+    map.filterG(filter);
+    renderToPreview(map);
+    return map;
+}
+
+function filterB(filter: ImageChannelFilter, map = previewToPixelmap()) {
+    map.filterB(filter);
+    renderToPreview(map);
+    return map;
+}
+
+function filterA(filter: ImageChannelFilter, map = previewToPixelmap()) {
+    map.filterA(filter);
     renderToPreview(map);
     return map;
 }

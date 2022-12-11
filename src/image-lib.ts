@@ -9,7 +9,7 @@ export type ImageGenerator<T> = (x: number, y: number) => T;
 
 export type ImageFilter<T> = (value: T, x: number, y: number) => T;
 
-
+export type ImageChannelFilter = ((value: number, color: Color, x: number, y: number) => number)
 
 export class ImageLib {
 
@@ -246,6 +246,29 @@ export class RGBAPixelMap extends PixelMap<Color> {
             return result;
         };
         return super.filter(wrappedFilterFunc);
+    }
+
+    filterChannel(filter: ((v: number, value: Color, x: number, y: number)), channel: number) {
+        return super.filter((c: Color, x: number, y: number) => {
+            c[channel] = filter(c[channel], c, x, y);
+            return c;
+        });
+    }
+
+    filterR(filter: ImageChannelFilter) {
+        return this.filterChannel(filter, 0)
+    }
+
+    filterG(filter: ImageChannelFilter) {
+        return this.filterChannel(filter, 1)
+    }
+
+    filterB(filter: ImageChannelFilter) {
+        return this.filterChannel(filter, 2)
+    }
+
+    filterA(filter: ImageChannelFilter) {
+        return this.filterChannel(filter, 3);
     }
 
     public toColor(v: Color): Color { return v; }
