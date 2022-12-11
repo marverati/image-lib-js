@@ -248,7 +248,7 @@ export class RGBAPixelMap extends PixelMap<Color> {
         return super.filter(wrappedFilterFunc);
     }
 
-    filterChannel(filter: ((v: number, value: Color, x: number, y: number)), channel: number) {
+    filterChannel(filter: ImageChannelFilter, channel: number) {
         return super.filter((c: Color, x: number, y: number) => {
             c[channel] = filter(c[channel], c, x, y);
             return c;
