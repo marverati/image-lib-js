@@ -237,6 +237,17 @@ export class RGBAPixelMap extends PixelMap<Color> {
         }
     }
 
+    filter(filter: ImageFilter<Color> | ((value: Color, x: number, y: number) => number)) {
+        const wrappedFilterFunc = (c: Color, x: number, y: number) => {
+            const result = filter(c, x, y);
+            if (!(result instanceof Array) && typeof result === 'number') {
+                return [result, result, result, 255] as Color;
+            }
+            return result;
+        };
+        return super.filter(wrappedFilterFunc);
+    }
+
     public toColor(v: Color): Color { return v; }
     public clone(width = this.width, height = this.height) { return new RGBAPixelMap(width, height, (x, y) => this.data[y][x]); }
     public blend(a: Color, b: Color, f: number): Color {

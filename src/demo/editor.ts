@@ -22,12 +22,16 @@ window.addEventListener('load', () => {
         generate,
         gen: generate,
         filter,
+        applyImage: renderToPreview,
         perlin2D,
         fractalPerlin2D,
     })
 
     addExamples();
     prepareTextarea();
+
+    // Allow dropping images into
+    turnIntoImageDropTarget(document.body, (img) => renderToPreview(img));
 });
 
 function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = canvas.width, height = canvas.height) {
@@ -37,14 +41,7 @@ function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = canvas
 }
 
 function filter(filterFunc: ImageFilter<Color>, map = previewToPixelmap()) {
-    const wrappedFilterFunc = (c, x, y) => {
-        const result = filterFunc(c, x, y);
-        if (!(result instanceof Array) && typeof result === 'number') {
-            return [result, result, result, 255] as Color;
-        }
-        return result;
-    }
-    map.filter(wrappedFilterFunc);
+    map.filter(filterFunc);
     renderToPreview(map);
     return map;
 }
@@ -135,3 +132,40 @@ function prepareWindowScope() {
 function displayError(e: any) {
     console.error(e);
 }
+
+function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageElement) => void, handleError = (e: ErrorEvent) => {}) {
+  
+    // Set up event listeners for the drag and drop events
+    div.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      // Visualize
+      div.classList.add("drop-target");
+    });
+  
+    div.addEventListener("dragleave", () => {
+      // End visualization
+      div.classList.remove("drop-target");
+    });
+  
+    div.addEventListener("drop", (event) => {
+      event.preventDefault();
+      // Check if the file is an image
+      const file = event.dataTransfer.files[0];
+      if (file.type.startsWith("image/")) {
+        // Handle the dropped image file
+        const img = new Image();
+        const reader = new FileReader();
+        // Set up an event listener for the "load" event on the FileReader
+        reader.addEventListener("load", () => {
+            img.addEventListener("load", () => handleImage(img));
+            img.addEventListener("error", (error: ErrorEvent) => handleError(error));
+            img.src = reader.result as string;
+        });
+        reader.readAsDataURL(file);
+      }
+  
+      // End visualization
+      div.classList.remove("drop-target");
+    });
+  }
+  
