@@ -11,6 +11,11 @@ export type ImageFilter<T> = (value: T, x: number, y: number) => T;
 
 export type ImageChannelFilter = ((value: number, color: Color, x: number, y: number) => number)
 
+let currentlyConstructingPixelmap: PixelMap<any> | null = null;
+
+export function isConstructingPixelmap(): PixelMap<any> | null {
+    return currentlyConstructingPixelmap;
+}
 export class ImageLib {
 
     public static generate(gen: Colorizable | ImageGenerator<Colorizable>, width: number, height = width) {
@@ -51,6 +56,7 @@ export abstract class PixelMap<T> {
     protected initialValue: T;
 
     constructor(width: number, height: number, initialValue: T | ImageGenerator<T>) {
+        currentlyConstructingPixelmap = this;
         this.width = width;
         this.height = height;
         this.initialValue = initialValue instanceof Function ? initialValue(0, 0) : initialValue;
@@ -64,6 +70,7 @@ export abstract class PixelMap<T> {
                 row[x] = generator(x, y);
             }
         }
+        currentlyConstructingPixelmap = null;
     }
 
     forEach(processor: PixelProcessor<T>) {

@@ -1,4 +1,4 @@
-import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Color, PixelMap, Colorizable, ImageGenerator, ImageFilter, ImageChannelFilter } from "../image-lib";
+import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Color, PixelMap, Colorizable, ImageGenerator, ImageFilter, ImageChannelFilter, isConstructingPixelmap } from "../image-lib";
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
 import { exposeToWindow } from "./util";
 import { examples } from "./examples";
@@ -6,6 +6,7 @@ import { examples } from "./examples";
 let editor: HTMLTextAreaElement;
 let sourceCanvas, targetCanvas: HTMLCanvasElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
+let generatorSize: { width: number, height: number} | null = null;
 
 window.addEventListener('load', () => {
     editor = document.getElementById("editor-text") as HTMLTextAreaElement;
@@ -49,7 +50,9 @@ window.addEventListener('load', () => {
 });
 
 function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = sourceCanvas.width, height = sourceCanvas.height) {
+    generatorSize = { width, height };
     const map = new ColorMap(width, height, gen);
+    generatorSize = null;
     renderToSource(map);
     renderToTarget(map);
     return map;
@@ -217,7 +220,7 @@ function targetToPixelmap(): RGBAPixelMap {
 function prepareWindowScope() {
     Object.defineProperty(window, 'width', {
         get() {
-            return targetCanvas.width;
+            return generatorSize?.width ?? isConstructingPixelmap()?.width ?? targetCanvas.width;
         },
         set(value) {
             targetCanvas.width = value;
@@ -227,7 +230,7 @@ function prepareWindowScope() {
     });
     Object.defineProperty(window, 'height', {
         get() {
-            return targetCanvas.height;
+            return generatorSize?.height ?? isConstructingPixelmap()?.height ?? targetCanvas.height;
         },
         set(value) {
             targetCanvas.height = value;
