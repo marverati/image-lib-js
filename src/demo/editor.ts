@@ -4,18 +4,23 @@ import { exposeToWindow } from "./util";
 import { examples } from "./examples";
 
 let editor: HTMLTextAreaElement;
-let canvas: HTMLCanvasElement;
-let context: CanvasRenderingContext2D;
+let sourceCanvas, targetCanvas: HTMLCanvasElement;
+let sourceContext, targetContext: CanvasRenderingContext2D;
 
 window.addEventListener('load', () => {
     editor = document.getElementById("editor-text") as HTMLTextAreaElement;
-    canvas = document.getElementById("editor-canvas") as HTMLCanvasElement;
-    context = canvas.getContext("2d");
+    sourceCanvas = document.getElementById("source-canvas") as HTMLCanvasElement;
+    sourceContext = sourceCanvas.getContext("2d");
+    targetCanvas = document.getElementById("target-canvas") as HTMLCanvasElement;
+    targetContext = targetCanvas.getContext("2d");
 
     // For our code snippets to work as a function based on raw text, we need to add classes to window scope
     exposeToWindow({
-        canvas,
-        context,
+        sourceCanvas,
+        targetCanvas,
+        context: targetContext,
+        targetContext,
+        sourceContext,
         GrayscalePixelMap,
         RGBAPixelMap,
         ColorMap,
@@ -26,7 +31,8 @@ window.addEventListener('load', () => {
         filterG,
         filterB,
         filterA,
-        applyImage: renderToPreview,
+        applyImage: renderToTarget,
+        applyTargetToSource,
         perlin2D,
         fractalPerlin2D,
     })
@@ -35,42 +41,43 @@ window.addEventListener('load', () => {
     prepareTextarea();
 
     // Allow dropping images into
-    turnIntoImageDropTarget(document.body, (img) => renderToPreview(img));
+    turnIntoImageDropTarget(document.body, (img) => { renderToSource(img); applySourceToTarget(); });
 });
 
-function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = canvas.width, height = canvas.height) {
+function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = sourceCanvas.width, height = sourceCanvas.height) {
     const map = new ColorMap(width, height, gen);
-    renderToPreview(map);
+    renderToTarget(map);
+    applyTargetToSource();
     return map;
 }
 
-function filter(filterFunc: ImageFilter<Color>, map = previewToPixelmap()) {
+function filter(filterFunc: ImageFilter<Color>, map = sourceToPixelmap()) {
     map.filter(filterFunc);
-    renderToPreview(map);
+    renderToTarget(map);
     return map;
 }
 
-function filterR(filter: ImageChannelFilter, map = previewToPixelmap()) {
+function filterR(filter: ImageChannelFilter, map = sourceToPixelmap()) {
     map.filterR(filter);
-    renderToPreview(map);
+    renderToTarget(map);
     return map;
 }
 
-function filterG(filter: ImageChannelFilter, map = previewToPixelmap()) {
+function filterG(filter: ImageChannelFilter, map = sourceToPixelmap()) {
     map.filterG(filter);
-    renderToPreview(map);
+    renderToTarget(map);
     return map;
 }
 
-function filterB(filter: ImageChannelFilter, map = previewToPixelmap()) {
+function filterB(filter: ImageChannelFilter, map = sourceToPixelmap()) {
     map.filterB(filter);
-    renderToPreview(map);
+    renderToTarget(map);
     return map;
 }
 
-function filterA(filter: ImageChannelFilter, map = previewToPixelmap()) {
+function filterA(filter: ImageChannelFilter, map = sourceToPixelmap()) {
     map.filterA(filter);
-    renderToPreview(map);
+    renderToTarget(map);
     return map;
 }
 
@@ -110,16 +117,17 @@ function runCode() {
         const fnc = new Function(code);
         const result = fnc();
         if (result) {
-            renderToPreview(result);
+            renderToTarget(result);
         }
     } catch(e) {
         displayError(e);
     }
 }
 
-function renderToPreview(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement) {
+function renderToCanvas(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement, canvas: HTMLCanvasElement) {
     if (result instanceof PixelMap) {
-        result = result.toImage();
+        result.toCanvas(canvas);
+        return;
     }
     if (result instanceof Image || (result instanceof HTMLCanvasElement && result !== canvas)) {
         if (result instanceof Image && result.naturalWidth === 0) {
@@ -128,22 +136,38 @@ function renderToPreview(result: PixelMap<any> | HTMLImageElement | HTMLCanvasEl
             result.addEventListener('load', () => {
                 canvas.width = img.naturalWidth;
                 canvas.height = img.naturalHeight;
-                context.drawImage(img, 0, 0);
+                canvas.getContext("2d").drawImage(img, 0, 0);
             });
         } else {
             // Render immediately
             canvas.width = result instanceof Image ? result.naturalWidth : result.width;
             canvas.height = result instanceof Image ? result.naturalHeight : result.height;
-            context.drawImage(result, 0, 0);
+            canvas.getContext("2d").drawImage(result, 0, 0);
         }
     }
 }
 
-function previewToPixelmap(): RGBAPixelMap {
-    const w = canvas.width;
-    const imgData = context.getImageData(0, 0, w, canvas.height);
+function renderToTarget(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement) {
+    renderToCanvas(result, targetCanvas);
+}
+
+function renderToSource(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement) {
+    renderToCanvas(result, sourceCanvas);
+}
+
+function applyTargetToSource() {
+    renderToSource(targetCanvas);
+}
+
+function applySourceToTarget() {
+    renderToTarget(sourceCanvas);
+}
+
+function sourceToPixelmap(): RGBAPixelMap {
+    const w = sourceCanvas.width;
+    const imgData = targetContext.getImageData(0, 0, w, sourceCanvas.height);
     const data = imgData.data;
-    const map = new ColorMap(w, canvas.height, (x, y) => {
+    const map = new ColorMap(w, sourceCanvas.height, (x, y) => {
         const p = 4 * (x + y * w);
         return [ data[p], data[p + 1], data[p + 2], data[p + 3] ];
     });
@@ -152,8 +176,8 @@ function previewToPixelmap(): RGBAPixelMap {
 
 function prepareWindowScope() {
     exposeToWindow({
-        width: canvas.width,
-        height: canvas.height,
+        width: sourceCanvas.width,
+        height: sourceCanvas.height,
     });
 }
 

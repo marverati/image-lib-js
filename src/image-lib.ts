@@ -151,8 +151,8 @@ export abstract class PixelMap<T> {
 
     abstract blend(v1: T, v2: T, blendFactor: number): T;
 
-    toCanvas(): HTMLCanvasElement {
-        const ctx = ImageLib.createCanvasContext(this.width, this.height);
+    toCanvas(canvas?: HTMLCanvasElement | null): HTMLCanvasElement {
+        const ctx = canvas ? canvas.getContext("2d") : ImageLib.createCanvasContext(this.width, this.height);
         const imageData = ctx.createImageData(this.width, this.height);
         const data = imageData.data;
         // Apply pixel color

@@ -1,0 +1,56 @@
+<html>
+<head>
+    <title>ImageLibJS Single Pane Editor</title>
+    <script src="./editorSingle.ts"></script>
+    <style>
+        h1, h2 {
+            font-family: sans-serif;
+            text-align: center;
+            padding-top: 24px;
+        }
+
+        img, canvas {
+            display: block;
+            margin: auto;
+            box-shadow: 0px 2px 8px #0005;
+        }
+
+        textarea {
+            display: block;
+            margin: 12px auto;
+            width: 1024px;
+            height: 400px;
+        }
+
+        #example-container {
+            max-width: 1024px;
+            border: 1px solid #ccc;
+            margin: 32px auto;
+        }
+
+        .example {
+            width: 140px;
+            height: 22px;
+            margin: 8px;
+        }
+
+        .drop-target {
+            background-color: #ddf;
+            filter: blur(2px)
+        }
+
+        .checkerboard {
+            background: repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 32px 32px;
+            background-position-x: left;
+            background-position-y: top;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>ImageLibJS Editor</h1>
+    <canvas id="editor-canvas" class="checkerboard" width="1024" height="512"></canvas>
+    <textarea id="editor-text"></textarea>
+    <div id="example-container"></div>
+</body>
+</html>

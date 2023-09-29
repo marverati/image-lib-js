@@ -1,6 +1,6 @@
 <html>
 <head>
-    <title>ImageLibJS Editor</title>
+    <title>ImageLibJS Primary Editor</title>
     <script src="./editor.ts"></script>
     <style>
         h1, h2 {
@@ -20,6 +20,17 @@
             margin: 12px auto;
             width: 1024px;
             height: 400px;
+        }
+
+        #preview-container {
+            display: flex;
+            flex-direction: row;
+        }
+
+        #preview-container canvas {
+            flex: 0 0 1;
+            max-width: 45vw;
+            max-height: 40vh;
         }
 
         #example-container {
@@ -49,7 +60,10 @@
 </head>
 <body>
     <h1>ImageLibJS Editor</h1>
-    <canvas id="editor-canvas" class="checkerboard" width="1024" height="512"></canvas>
+    <div id="preview-container">
+        <canvas id="source-canvas" class="checkerboard" width="1024" height="512"></canvas>
+        <canvas id="target-canvas" class="checkerboard" width="1024" height="512"></canvas>
+    </div>
     <textarea id="editor-text"></textarea>
     <div id="example-container"></div>
 </body>
