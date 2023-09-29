@@ -152,6 +152,12 @@ export abstract class PixelMap<T> {
     abstract blend(v1: T, v2: T, blendFactor: number): T;
 
     toCanvas(canvas?: HTMLCanvasElement | null): HTMLCanvasElement {
+        if (canvas && canvas.width !== this.width) {
+            canvas.width = this.width;
+        }
+        if (canvas && canvas.height !== this.height) {
+            canvas.height = this.height;
+        }
         const ctx = canvas ? canvas.getContext("2d") : ImageLib.createCanvasContext(this.width, this.height);
         const imageData = ctx.createImageData(this.width, this.height);
         const data = imageData.data;

@@ -50,8 +50,8 @@ window.addEventListener('load', () => {
 
 function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = sourceCanvas.width, height = sourceCanvas.height) {
     const map = new ColorMap(width, height, gen);
+    renderToSource(map);
     renderToTarget(map);
-    applyTargetToSource();
     return map;
 }
 
@@ -215,9 +215,25 @@ function targetToPixelmap(): RGBAPixelMap {
 }
 
 function prepareWindowScope() {
-    exposeToWindow({
-        width: sourceCanvas.width,
-        height: sourceCanvas.height,
+    Object.defineProperty(window, 'width', {
+        get() {
+            return targetCanvas.width;
+        },
+        set(value) {
+            targetCanvas.width = value;
+        },
+        configurable: true,
+        enumerable: true
+    });
+    Object.defineProperty(window, 'height', {
+        get() {
+            return targetCanvas.height;
+        },
+        set(value) {
+            targetCanvas.height = value;
+        },
+        configurable: true,
+        enumerable: true
     });
 }
 

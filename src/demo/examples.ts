@@ -38,5 +38,16 @@ return new GrayscalePixelMap(width, height, (x0, y0) => {
         x = newx;
     }
     return 0;
-}).toImage()`
+}).toImage()`,
+// Resizing
+'resizing': `// Some random content
+gen((x, y) => [255 * x / 2048, 255 * y / 2048, ((x % 200) < 100) === ((y % 200) < 100) ? 255 : 0], 2048, 2048)
+// Scale to some absolute size
+resize(1920, 1080);
+// Scale relatively
+rescale(0.5);
+// Crop to to left corner
+crop(600, 300);
+// Crop to right center
+crop(200, 200, 1, 0.5);`,
 }
