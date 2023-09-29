@@ -26,7 +26,7 @@ window.addEventListener('load', () => {
         RGBAPixelMap,
         ColorMap,
         generate,
-        gen: generate,
+        gen,
         filter,
         filterR,
         filterG,
@@ -57,32 +57,33 @@ function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = source
     renderToTarget(map);
     return map;
 }
+const gen = generate;
 
-function filter(filterFunc: ImageFilter<Color>, map = sourceToPixelmap()) {
+function filter(filterFunc: ImageFilter<Color>, map = targetToPixelmap()) {
     map.filter(filterFunc);
     renderToTarget(map);
     return map;
 }
 
-function filterR(filter: ImageChannelFilter, map = sourceToPixelmap()) {
+function filterR(filter: ImageChannelFilter, map = targetToPixelmap()) {
     map.filterR(filter);
     renderToTarget(map);
     return map;
 }
 
-function filterG(filter: ImageChannelFilter, map = sourceToPixelmap()) {
+function filterG(filter: ImageChannelFilter, map = targetToPixelmap()) {
     map.filterG(filter);
     renderToTarget(map);
     return map;
 }
 
-function filterB(filter: ImageChannelFilter, map = sourceToPixelmap()) {
+function filterB(filter: ImageChannelFilter, map = targetToPixelmap()) {
     map.filterB(filter);
     renderToTarget(map);
     return map;
 }
 
-function filterA(filter: ImageChannelFilter, map = sourceToPixelmap()) {
+function filterA(filter: ImageChannelFilter, map = targetToPixelmap()) {
     map.filterA(filter);
     renderToTarget(map);
     return map;
@@ -280,3 +281,17 @@ function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageE
     });
   }
   
+  export {
+    generate,
+    gen,
+    filter,
+    filterR,
+    filterG,
+    filterB,
+    filterA,
+    resize,
+    rescale,
+    crop,
+    applyTargetToSource,
+    applySourceToTarget,
+  }
