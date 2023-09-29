@@ -31,8 +31,12 @@ window.addEventListener('load', () => {
         filterG,
         filterB,
         filterA,
+        resize,
+        rescale,
+        crop,
         applyImage: renderToTarget,
         applyTargetToSource,
+        applySourceToTarget,
         perlin2D,
         fractalPerlin2D,
     })
@@ -79,6 +83,31 @@ function filterA(filter: ImageChannelFilter, map = sourceToPixelmap()) {
     map.filterA(filter);
     renderToTarget(map);
     return map;
+}
+
+function resize(width: number, height: number = width) {
+    console.log('Resizing to', width, height);
+    const map = targetToPixelmap();
+    const cnv = map.toCanvas();
+    targetCanvas.width = width;
+    targetCanvas.height = height;
+    targetContext.drawImage(cnv, 0, 0, width, height);
+}
+
+function crop(width: number, height: number = width, relAnchorX = 0, relAnchorY = relAnchorX) {
+    const wDiff = targetCanvas.width - width, hDiff = targetCanvas.height - height;
+    const offX = -relAnchorX * wDiff, offY = -relAnchorY * hDiff;
+    const map = targetToPixelmap();
+    const cnv = map.toCanvas();
+    targetCanvas.width = width;
+    targetCanvas.height = height;
+    targetContext.drawImage(cnv, offX, offY);
+}
+
+function rescale(fx: number, fy = fx) {
+    const w = Math.round(targetCanvas.width * fx), h = Math.round(targetCanvas.height * fy);
+    console.log('Rescaling to', w, h);
+    resize(w, h);
 }
 
 function prepareTextarea() {
@@ -165,9 +194,20 @@ function applySourceToTarget() {
 
 function sourceToPixelmap(): RGBAPixelMap {
     const w = sourceCanvas.width;
-    const imgData = targetContext.getImageData(0, 0, w, sourceCanvas.height);
+    const imgData = sourceContext.getImageData(0, 0, w, sourceCanvas.height);
     const data = imgData.data;
     const map = new ColorMap(w, sourceCanvas.height, (x, y) => {
+        const p = 4 * (x + y * w);
+        return [ data[p], data[p + 1], data[p + 2], data[p + 3] ];
+    });
+    return map;
+}
+
+function targetToPixelmap(): RGBAPixelMap {
+    const w = targetCanvas.width;
+    const imgData = targetContext.getImageData(0, 0, w, targetCanvas.height);
+    const data = imgData.data;
+    const map = new ColorMap(w, targetCanvas.height, (x, y) => {
         const p = 4 * (x + y * w);
         return [ data[p], data[p + 1], data[p + 2], data[p + 3] ];
     });
