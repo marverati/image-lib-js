@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "parcel src/index.html",
     "build": "parcel build src/index.html",
+    "build:editor": "parcel build src/demo/editor.html",
     "demo": "parcel src/demo/demo.html",
     "editor": "parcel src/demo/editor.html"
   },

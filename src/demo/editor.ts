@@ -1,6 +1,6 @@
 import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Color, PixelMap, Colorizable, ImageGenerator, ImageFilter, ImageChannelFilter, isConstructingPixelmap } from "../image-lib";
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
-import { exposeToWindow } from "./util";
+import { clamp, exposeToWindow, getRangeMapper, mapRange } from "./util";
 import { examples } from "./examples";
 
 let editor: HTMLTextAreaElement;
@@ -35,11 +35,16 @@ window.addEventListener('load', () => {
         resize,
         rescale,
         crop,
+        mirror,
+        flip,
         applyImage: renderToTarget,
         applyTargetToSource,
         applySourceToTarget,
         perlin2D,
         fractalPerlin2D,
+        clamp,
+        mapRange,
+        getRangeMapper,
     })
 
     addExamples();
@@ -90,7 +95,6 @@ function filterA(filter: ImageChannelFilter, map = targetToPixelmap()) {
 }
 
 function resize(width: number, height: number = width) {
-    console.log('Resizing to', width, height);
     const map = targetToPixelmap();
     const cnv = map.toCanvas();
     targetCanvas.width = width;
@@ -110,8 +114,24 @@ function crop(width: number, height: number = width, relAnchorX = 0, relAnchorY 
 
 function rescale(fx: number, fy = fx) {
     const w = Math.round(targetCanvas.width * fx), h = Math.round(targetCanvas.height * fy);
-    console.log('Rescaling to', w, h);
     resize(w, h);
+}
+
+function mirror() {
+    const map = targetToPixelmap();
+    const cnv = map.toCanvas();
+    targetCanvas.width = targetCanvas.width;
+    targetContext.save();
+    targetContext.translate(cnv.width, 0);
+    targetContext.scale(-1, 1);
+    targetContext.drawImage(cnv, 0, 0);
+    targetContext.restore();
+}
+
+function flip() {
+    const map = targetToPixelmap();
+    const cnv = map.toCanvas();
+    targetContext.drawImage(cnv, 0, cnv.height, cnv.width, -cnv.height);
 }
 
 function prepareTextarea() {
