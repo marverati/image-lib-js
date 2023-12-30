@@ -1,12 +1,22 @@
 import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Color, PixelMap, Colorizable, ImageGenerator, ImageFilter, ImageChannelFilter, isConstructingPixelmap } from "../image-lib";
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
-import { clamp, exposeToWindow, getRangeMapper, mapRange } from "./util";
+import { clamp, exposeToWindow, removeNonStandardCharacters, getRangeMapper, mapRange } from "./util";
 import { examples } from "./examples";
+import { DataStorage } from "../storage/DataStorage";
+import { SmartStorage } from "../storage/SmartStorage";
 
 let editor: HTMLTextAreaElement;
 let sourceCanvas, targetCanvas: HTMLCanvasElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
 let generatorSize: { width: number, height: number} | null = null;
+
+let currentUserCodeName: string | null = null;
+let userCodes: Record<string, string> = {};
+const storage: DataStorage = new SmartStorage();
+
+const INITIAL_USER_CODE = `applySourceToTarget();
+
+// Your code here`
 
 window.addEventListener('load', () => {
     editor = document.getElementById("editor-text") as HTMLTextAreaElement;
@@ -22,6 +32,7 @@ window.addEventListener('load', () => {
         context: targetContext,
         targetContext,
         sourceContext,
+        saveCurrentSnippet,
         GrayscalePixelMap,
         RGBAPixelMap,
         ColorMap,
@@ -143,24 +154,95 @@ function prepareTextarea() {
     });
 }
 
-function addExamples() {
+async function addExamples() {
     const container = document.getElementById('example-container');
     for (const name of Object.keys(examples)) {
         const button = document.createElement('button');
         button.className = 'example';
         button.textContent = name;
         button.onclick = () => {
+            saveCurrentSnippet();
             const comment = `// ${name}`;
             const code = comment + '\n' + examples[name];
             setEditorText(code);
+            currentUserCodeName = null;
         }
         container.appendChild(button);
+    }
+    // New Snippet button
+    container.appendChild(document.createElement('BR'));
+    const btn = document.createElement('button');
+    btn.className = 'example new-snippet';
+    btn.textContent = "New Snippet";
+    btn.onclick = () => {
+        saveCurrentSnippet();
+        const name = createNewSnippet();
+        const button = document.createElement('button');
+        button.className = 'example snippet';
+        button.textContent = name;
+        button.onclick = () => {
+            saveCurrentSnippet();
+            currentUserCodeName = name;
+            setEditorText(userCodes[name] ?? '');
+        }
+        container.appendChild(button);
+    };
+    container.appendChild(btn);
+    container.appendChild(document.createElement('BR'));
+    // User snippets
+    const snippets = await storage.getValue('codes', null);
+    if (snippets) {
+        try {
+            userCodes = JSON.parse(snippets);
+            const codeNames = Object.keys(userCodes);
+            for (const name of codeNames) {
+                const button = document.createElement('button');
+                button.className = 'example snippet';
+                button.textContent = name;
+                button.onclick = () => {
+                    saveCurrentSnippet();
+                    currentUserCodeName = name;
+                    setEditorText(userCodes[name] ?? '');
+                }
+                container.appendChild(button);
+            }
+        } catch(e) {
+            console.error(e);
+        }
     }
 }
 
 function setEditorText(s: string) {
     editor.value = s;
     runCode();
+}
+
+function getEditorText() {
+    return editor.value;
+}
+
+function createNewSnippet(): string | null {
+    const name = removeNonStandardCharacters(prompt("Name of new code snippet. May include letters, numbers and the following special characters: -_,:+"));
+    if (name === "" || name in userCodes) {
+        alert("Name '" + name + "' already taken! Please try again with a different name.");
+        return null;
+    } else {
+        currentUserCodeName = name;
+        userCodes[name] = "// *** " + name + " ***\n" + INITIAL_USER_CODE;
+        setEditorText(userCodes[name]);
+        return name;
+    }
+}
+
+function saveCurrentSnippet() {
+    if (currentUserCodeName) {
+        userCodes[currentUserCodeName] = getEditorText();
+        saveAllSnippets();
+    }
+}
+
+function saveAllSnippets() {
+    storage.setValue('codes', JSON.stringify(userCodes));
 }
 
 function runCode() {

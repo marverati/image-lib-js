@@ -23,3 +23,14 @@ export function getRangeMapper(fromMin: number, fromMax: number, toMin: number, 
 export function clamp(v: number, min: number, max: number): number {
     return v < min ? min : v > max ? max : v;
 }
+
+const allowedCharacters = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,-_+:`
+export function removeNonStandardCharacters(s: string): string {
+    let result = '';
+    for (const c of s) {
+        if (allowedCharacters.includes(c)) {
+            result += c;
+        }
+    }
+    return result;
+}
