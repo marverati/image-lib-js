@@ -38,6 +38,7 @@ window.addEventListener('load', () => {
         ColorMap,
         generate,
         gen,
+        fill,
         filter,
         filterR,
         filterG,
@@ -74,6 +75,7 @@ function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = source
     return map;
 }
 const gen = generate;
+const fill = generate;
 
 function filter(filterFunc: ImageFilter<Color>, map = targetToPixelmap()) {
     map.filter(filterFunc);
@@ -177,15 +179,17 @@ async function addExamples() {
     btn.onclick = () => {
         saveCurrentSnippet();
         const name = createNewSnippet();
-        const button = document.createElement('button');
-        button.className = 'example snippet';
-        button.textContent = name;
-        button.onclick = () => {
-            saveCurrentSnippet();
-            currentUserCodeName = name;
-            setEditorText(userCodes[name] ?? '');
+        if (name) {
+            const button = document.createElement('button');
+            button.className = 'example snippet';
+            button.textContent = name;
+            button.onclick = () => {
+                saveCurrentSnippet();
+                currentUserCodeName = name;
+                setEditorText(userCodes[name] ?? '');
+            }
+            container.appendChild(button);
         }
-        container.appendChild(button);
     };
     container.appendChild(btn);
     container.appendChild(document.createElement('BR'));
@@ -222,9 +226,11 @@ function getEditorText() {
 }
 
 function createNewSnippet(): string | null {
-    const name = removeNonStandardCharacters(prompt("Name of new code snippet. May include letters, numbers and the following special characters: -_,:+"));
-    if (name === "" || name in userCodes) {
-        alert("Name '" + name + "' already taken! Please try again with a different name.");
+    const name = removeNonStandardCharacters(prompt("Name of new code snippet. May include letters, numbers and the following special characters: -_,:+") ?? '');
+    if (!name || name in userCodes) {
+        if (name) {
+            alert("Name '" + name + "' already taken! Please try again with a different name.");
+        }
         return null;
     } else {
         currentUserCodeName = name;
