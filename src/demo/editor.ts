@@ -1,4 +1,5 @@
-import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Color, PixelMap, Colorizable, ImageGenerator, ImageFilter, ImageChannelFilter, isConstructingPixelmap } from "../image-lib";
+import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Colorizable, isConstructingPixelmap } from "../image-lib";
+import { ImageGenerator, ImageFilter, ImageChannelFilter, Color, PixelMap } from "../PixelMap";
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
 import { clamp, createElement, exposeToWindow, getRangeMapper, mapRange, removeNonStandardCharacters } from "./util";
 import { examples } from "./examples";

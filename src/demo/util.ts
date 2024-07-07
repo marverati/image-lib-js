@@ -24,6 +24,10 @@ export function clamp(v: number, min: number, max: number): number {
     return v < min ? min : v > max ? max : v;
 }
 
+export function absMod(v: number, m: number): number {
+    return ((v % m) + m) % m;
+}
+
 const allowedCharacters = `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,-_+:`
 export function removeNonStandardCharacters(s: string): string {
     let result = '';
