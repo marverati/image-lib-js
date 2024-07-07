@@ -1,3 +1,4 @@
+import { clamp } from "./demo/util";
 
 
 export type Color = [number, number, number, number];
@@ -47,6 +48,12 @@ export class ImageLib {
         return img;
     }
 
+    public static createCanvasFromImage(img: HTMLImageElement): HTMLCanvasElement {
+        const ctx = this.createCanvasContext(img.naturalWidth, img.naturalHeight);
+        ctx.drawImage(img, 0, 0);
+        return ctx.canvas;
+    }
+
 }
 
 export abstract class PixelMap<T> {
@@ -71,6 +78,20 @@ export abstract class PixelMap<T> {
             }
         }
         currentlyConstructingPixelmap = null;
+    }
+
+    get(x: number, y: number): T {
+        return this.data[y][x];
+    }
+
+    getSmooth(x: number, y: number): T {
+        x = clamp(x, 0, this.width - 1);
+        y = clamp(y, 0, this.height - 1);
+        const x0 = Math.floor(x), y0 = Math.floor(y), x1 = Math.min(x0 + 1, this.width - 1), y1 = Math.min(y0 + 1, this.height - 1);
+        const fx = x - x0, fy = y - y0;
+        const cTop = this.blend(this.data[y0][x0], this.data[y0][x1], fx);
+        const cBtm = this.blend(this.data[y1][x0], this.data[y1][x1], fx);
+        return this.blend(cTop, cBtm, fy);
     }
 
     forEach(processor: PixelProcessor<T>) {
@@ -155,6 +176,8 @@ export abstract class PixelMap<T> {
     abstract clone(width?: number, height?: number): PixelMap<T>;
 
     abstract toColor(value: T): Color;
+
+    abstract fromColor(color: Color): T;
 
     abstract blend(v1: T, v2: T, blendFactor: number): T;
 
@@ -285,6 +308,7 @@ export class RGBAPixelMap extends PixelMap<Color> {
     }
 
     public toColor(v: Color): Color { return v; }
+    public fromColor(v: Color): Color { return v; }
     public clone(width = this.width, height = this.height) { return new RGBAPixelMap(width, height, (x, y) => this.data[y][x]); }
     public blend(a: Color, b: Color, f: number): Color {
         const alphaA = a[3] * (1 - f), alphaB = b[3] * f;
@@ -318,6 +342,17 @@ export class RGBAPixelMap extends PixelMap<Color> {
             ];
         })
     }
+
+    public static fromImage(img: HTMLImageElement): RGBAPixelMap {
+        const cnv = ImageLib.createCanvasFromImage(img);
+        document.body.appendChild(cnv);
+        const w = img.naturalWidth;
+        const data = cnv.getContext("2d").getImageData(0, 0, w, img.naturalHeight).data;
+        return new RGBAPixelMap(w, img.naturalHeight, (x: number, y: number) => {
+            const p = 4 * (y * w + x);
+            return [ data[p], data[p+1], data[p+2], data[p+3] ];
+        });
+    }
 }
 export const ColorMap = RGBAPixelMap;
 
@@ -326,6 +361,8 @@ export class RGBPixelMap extends PixelMap<ColorRGB> {
         super(width, height, initialValue);
     }
     public toColor(v: ColorRGB): Color { return [v[0], v[1], v[2], 255]; }
+    public static fromColor(c: Color): ColorRGB { return c.slice(0, 3) as ColorRGB; }
+    public fromColor(c: Color) { return RGBPixelMap.fromColor(c); }
     public clone(width = this.width, height = this.height) { return new RGBPixelMap(width, height, (x, y) => this.data[y][x]); }
     public blend(a: ColorRGB, b: ColorRGB, f: number): ColorRGB {
         const f1 = 1 - f;
@@ -344,6 +381,12 @@ export class RGBPixelMap extends PixelMap<ColorRGB> {
             return fr * c[0] + fg * c[1] + fb * c[2];
         });
     }
+
+    public static fromImage(img: HTMLImageElement): RGBPixelMap {
+        const cnv = ImageLib.createCanvasFromImage(img);
+        const data = cnv.getContext("2d").getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
+        return new RGBPixelMap(img.naturalWidth, img.naturalHeight, (x: number, y: number) => RGBPixelMap.fromColor(data[y][x]));
+    }
 }
 
 export class GrayscalePixelMap extends PixelMap<number> {
@@ -351,6 +394,8 @@ export class GrayscalePixelMap extends PixelMap<number> {
         super(width, height, initialValue);
     }
     public toColor(v: number): Color { return [v, v, v, 255]; }
+    public static fromColor(c: Color): number { return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] }
+    public fromColor(c: Color) { return GrayscalePixelMap.fromColor(c); }
     public clone(width = this.width, height = this.height) { return new GrayscalePixelMap(width, height, (x, y) => this.data[y][x]); }
     public blend(a: number, b: number, f: number): number { return f * b + (1 - f) * a; }
     public toRGB(): RGBPixelMap {
@@ -359,13 +404,27 @@ export class GrayscalePixelMap extends PixelMap<number> {
             return [c, c, c];
         })
     }
+
+    public static fromImage(img: HTMLImageElement): GrayscalePixelMap {
+        const cnv = ImageLib.createCanvasFromImage(img);
+        const data = cnv.getContext("2d").getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
+        return new GrayscalePixelMap(img.naturalWidth, img.naturalHeight, (x: number, y: number) => GrayscalePixelMap.fromColor(data[y][x]));
+    }
 }
 
 export class BoolPixelMap extends PixelMap<boolean> {
     constructor(width: number, height = width, initialValue: boolean | ImageGenerator<boolean> = false) {
         super(width, height, initialValue);
     }
+    public static fromColor(c: Color): boolean { return c[0] + c[1] + c[2] > 382.5; }
+    public fromColor(c: Color) { return BoolPixelMap.fromColor(c); }
     public toColor(v: boolean): Color { const c = v ? 255 : 0; return [c, c, c, 255]; }
     public clone(width = this.width, height = this.height) { return new BoolPixelMap(width, height, (x, y) => this.data[y][x]); }
     public blend(a: boolean, b: boolean, f: number): boolean { return f > 0.5 ? b : a; }
+
+    public static fromImage(img: HTMLImageElement): BoolPixelMap {
+        const cnv = ImageLib.createCanvasFromImage(img);
+        const data = cnv.getContext("2d").getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
+        return new BoolPixelMap(img.naturalWidth, img.naturalHeight, (x: number, y: number) => BoolPixelMap.fromColor(data[y][x]));
+    }
 }

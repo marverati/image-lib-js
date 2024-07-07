@@ -34,3 +34,23 @@ export function removeNonStandardCharacters(s: string): string {
     }
     return result;
 }
+
+export function createElement(tag: string, className = "", content?: string | HTMLElement[], parent?: HTMLElement): HTMLElement {
+    const el = document.createElement(tag);
+    if (className) {
+        el.className = className;
+    }
+    if (content) {
+        if (content instanceof Array) {
+            // Child content
+            content.forEach(child => el.appendChild(child));
+        } else {
+            // Text content
+            el.textContent = content;
+        }
+    }
+    if (parent) {
+        parent.appendChild(el);
+    }
+    return el;
+}

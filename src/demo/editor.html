@@ -47,13 +47,85 @@
 
         .drop-target {
             background-color: #ddf;
-            filter: blur(2px)
+        }
+        .drop-target h1, .drop-target #preview-container, .drop-target textarea, .drop-target #example-container {
+            filter: blur(2px);
         }
 
         .checkerboard {
             background: repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 32px 32px;
             background-position-x: left;
             background-position-y: top;
+        }
+
+        .drop-extra-container {
+            filter: none;
+            z-index: 99999;
+            position: fixed;
+            left: 50%;
+            width: 50%;
+            background-color: #00000040;
+            top: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: space-around;
+            flex-wrap: nowrap;
+        }
+
+        .drop-extra-field {
+            width: 50%;
+            height: 15%;
+            transform: translate(50%, 0);
+            flex-basis: 20%;
+            background-color: #ffffff40;
+            border-radius: 4px;
+            text-align: center;
+            font-family: sans-serif;
+            font-size: 200%;
+        }
+        .drop-extra-field:hover {
+            box-shadow: 0px 0px 8px #f0000080; 
+        }
+        .drop-extra-field:-moz-drag-over {
+            box-shadow: 0px 0px 8px #f0000080; 
+        }
+
+        #image-storage {
+            position: fixed;
+            width: 100px;
+            left: 0;
+            bottom: 0;
+            padding: 5px;
+            border: 1px solid #ccc;
+            background-color: #eee;
+        }
+        .image-storage-preview {
+            position: relative;
+            width: 96px;
+            height: 64px;
+            background-color: white;
+            margin: 4px auto;
+            border: 1px solid #aaa;
+            font-family: sans-serif;
+            text-shadow: 0 0 2px white;
+        }
+        .image-storage-preview img {
+            position: absolute;
+            max-width: 100%;
+            max-height: 100%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .image-storage-preview span {
+            position: relative;
+            z-index: 5;
+            background-color: #ffffff80;
+            font-weight: bold;
+            font-size: 80%;
+            padding: 0 4px;
         }
 
     </style>
@@ -66,5 +138,6 @@
     </div>
     <textarea id="editor-text"></textarea>
     <div id="example-container"></div>
+    <div id="image-storage"></div>
 </body>
 </html>

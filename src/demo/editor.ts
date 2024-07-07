@@ -1,6 +1,6 @@
 import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Color, PixelMap, Colorizable, ImageGenerator, ImageFilter, ImageChannelFilter, isConstructingPixelmap } from "../image-lib";
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
-import { clamp, exposeToWindow, removeNonStandardCharacters, getRangeMapper, mapRange } from "./util";
+import { clamp, createElement, exposeToWindow, getRangeMapper, mapRange, removeNonStandardCharacters } from "./util";
 import { examples } from "./examples";
 import { DataStorage } from "../storage/DataStorage";
 import { SmartStorage } from "../storage/SmartStorage";
@@ -12,11 +12,12 @@ let generatorSize: { width: number, height: number} | null = null;
 
 let currentUserCodeName: string | null = null;
 let userCodes: Record<string, string> = {};
-const storage: DataStorage = new SmartStorage();
+const persistentStorage: DataStorage = new SmartStorage();
 
 const INITIAL_USER_CODE = `applySourceToTarget();
 
 // Your code here`
+let imageStorage: HTMLImageElement[] = [];
 
 window.addEventListener('load', () => {
     editor = document.getElementById("editor-text") as HTMLTextAreaElement;
@@ -49,9 +50,15 @@ window.addEventListener('load', () => {
         crop,
         mirror,
         flip,
+        wrap: wrapImageInPixelMap,
+        combine,
+        combine2: combine,
+        combine3,
         applyImage: renderToTarget,
         applyTargetToSource,
         applySourceToTarget,
+        getStored,
+        getStoredImage,
         perlin2D,
         fractalPerlin2D,
         clamp,
@@ -62,9 +69,66 @@ window.addEventListener('load', () => {
     addExamples();
     prepareTextarea();
 
-    // Allow dropping images into
-    turnIntoImageDropTarget(document.body, (img) => { renderToSource(img); applySourceToTarget(); });
+    // Allow dropping images to load
+    turnIntoImageDropTarget(document.body, (img, _fieldId, target) => {
+        if (target instanceof HTMLElement && ((target as any).storageIndex >= 0 || (target.parentElement as any).storageIndex >= 0)) {
+            // Load to storage
+            const index = (target as any).storageIndex ?? (target.parentElement as any).storageIndex;
+            storeImage(img, +index);
+        } else {
+            // As main picture
+            renderToSource(img);
+            applySourceToTarget();
+        }
+    }, console.error);
+    updateStorage();
 });
+
+function wrapImageInPixelMap(img: HTMLImageElement) {
+    return RGBAPixelMap.fromImage(img);
+}
+
+function storeImage<T>(img: HTMLImageElement | PixelMap<T>, id?: number) {
+    const image = img instanceof PixelMap ? img.toImage() : img;
+    if (!image || !(image instanceof HTMLImageElement)) {
+        console.error("Invalid image: ", img);
+        return;
+    }
+    if (id == null || id < 0) {
+        id = imageStorage.findIndex(v => v == null);
+        if (id < 0) {
+            id = imageStorage.length;
+        }
+    }
+    imageStorage[id] = image;
+    updateStorage();
+}
+
+function getStoredImage(index: number): HTMLImageElement | null {
+    return imageStorage[index - 1] ?? null;
+}
+
+function getStored(index: number): RGBAPixelMap | null {
+    const img = getStoredImage(index);
+    if (img) {
+        return wrapImageInPixelMap(img);
+    }
+    return null
+}
+
+function updateStorage() {
+    const container = document.getElementById("image-storage");
+    container.innerHTML = "";
+    for (let i = imageStorage.length; i >= 0; i--) { // go one index further, to always show one empty option for user to drop image into
+        const el = createElement("div", "image-storage-preview checkerboard", null, container);
+        if (imageStorage[i]) {
+            const img = createElement("img", "", "", el) as HTMLImageElement;
+            img.src = imageStorage[i].src;
+        }
+        createElement("span", "", `${i + 1}`, el);
+        (el as any).storageIndex = i;
+    }
+}
 
 function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = sourceCanvas.width, height = sourceCanvas.height) {
     generatorSize = { width, height };
@@ -105,6 +169,43 @@ function filterA(filter: ImageChannelFilter, map = targetToPixelmap()) {
     map.filterA(filter);
     renderToTarget(map);
     return map;
+}
+
+function combine<T, U>(img1: PixelMap<T>, img2: PixelMap<U>, mapping: ((c1: T, c2: U, x: number, y: number) => Color), stretchRelative = false): RGBAPixelMap {
+    let result: RGBAPixelMap;
+    if (stretchRelative) {
+        // Relative 0...1 for both images, applying size of first image
+        const width = img1.width, height = img1.height;
+        const fx = (img2.width - 1) / (img1.width - 1), fy = (img2.height - 1) / (img1.height - 1);
+        const relfx = 1 / (width - 1), relfy = 1 / (height - 1);
+        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.getSmooth(x * fx, y * fy), x * relfx, y * relfy));
+    } else {
+        // Absolute coords using min size of both images
+        const width = Math.min(img1.width, img2.width);
+        const height = Math.min(img1.height, img2.height);
+        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.get(x,y), x, y));
+    }
+    renderToTarget(result);
+    return result;
+}
+
+function combine3<T, U, V>(img1: PixelMap<T>, img2: PixelMap<U>, img3: PixelMap<V>, mapping: ((c1: T, c2: U, c3: V, x: number, y: number) => Color), stretchRelative = false): RGBAPixelMap {
+    let result: RGBAPixelMap;
+    if (stretchRelative) {
+        // Relative 0...1 for both images, applying size of first image
+        const width = img1.width, height = img1.height;
+        const fx2 = (img2.width - 1) / (img1.width - 1), fy2 = (img2.height - 1) / (img1.height - 1);
+        const fx3 = (img3.width - 1) / (img1.width - 1), fy3 = (img3.height - 1) / (img1.height - 1);
+        const relfx = 1 / (width - 1), relfy = 1 / (height - 1);
+        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.getSmooth(x * fx2, y * fy2), img3.getSmooth(x * fx3, y * fy3), x * relfx, y * relfy));
+    } else {
+        // Absolute coords using min size of both images
+        const width = Math.min(img1.width, img2.width);
+        const height = Math.min(img1.height, img2.height);
+        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.get(x,y), img3.get(x,y), x, y));
+    }
+    renderToTarget(result);
+    return result;
 }
 
 function resize(width: number, height: number = width) {
@@ -194,7 +295,7 @@ async function addExamples() {
     container.appendChild(btn);
     container.appendChild(document.createElement('BR'));
     // User snippets
-    const snippets = await storage.getValue('codes', null);
+    const snippets = await persistentStorage.getValue('codes', null);
     if (snippets) {
         try {
             userCodes = JSON.parse(snippets);
@@ -248,7 +349,7 @@ function saveCurrentSnippet() {
 }
 
 function saveAllSnippets() {
-    storage.setValue('codes', JSON.stringify(userCodes));
+    persistentStorage.setValue('codes', JSON.stringify(userCodes));
 }
 
 function runCode() {
@@ -353,40 +454,59 @@ function displayError(e: any) {
     console.error(e);
 }
 
-function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageElement) => void, handleError = (e: ErrorEvent) => {}) {
+function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageElement, fieldId: number, target: EventTarget) => void, handleError = (e: ErrorEvent) => {}, extraFields: string[] = []) {
+    let extraContainer: HTMLElement | null = null;
   
     // Set up event listeners for the drag and drop events
     div.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      // Visualize
-      div.classList.add("drop-target");
+        event.preventDefault();
+        // Visualize
+        div.classList.add("drop-target");
+        // Extra fields
+        if (extraFields.length > 0 && !extraContainer) {
+            extraContainer = createElement(
+                "div",
+                "drop-extra-container",
+                extraFields.map((name: string) => createElement("div", "drop-extra-field", name)),
+                div
+            )
+        }
     });
   
-    div.addEventListener("dragleave", () => {
-      // End visualization
-      div.classList.remove("drop-target");
+    div.addEventListener("dragleave", (event) => {
+        if (event.target === document.body) {
+            // End visualization
+            clearDropOverlay();
+        }
     });
   
     div.addEventListener("drop", (event) => {
-      event.preventDefault();
-      // Check if the file is an image
-      const file = event.dataTransfer.files[0];
-      if (file.type.startsWith("image/")) {
-        // Handle the dropped image file
-        const img = new Image();
-        const reader = new FileReader();
-        // Set up an event listener for the "load" event on the FileReader
-        reader.addEventListener("load", () => {
-            img.addEventListener("load", () => handleImage(img));
-            img.addEventListener("error", (error: ErrorEvent) => handleError(error));
-            img.src = reader.result as string;
-        });
-        reader.readAsDataURL(file);
-      }
-  
-      // End visualization
-      div.classList.remove("drop-target");
+        event.preventDefault();
+        // Check if the file is an image
+        const file = event.dataTransfer.files[0];
+        if (file.type.startsWith("image/")) {
+            // Handle the dropped image file
+            const img = new Image();
+            const reader = new FileReader();
+            const fieldId = extraContainer ? Array.from(extraContainer.children).indexOf(event.target as HTMLElement) : -1;
+            // Set up an event listener for the "load" event on the FileReader
+            reader.addEventListener("load", () => {
+                img.addEventListener("load", () => handleImage(img, fieldId, event.target));
+                img.addEventListener("error", (error: ErrorEvent) => handleError(error));
+                img.src = reader.result as string;
+            });
+            reader.readAsDataURL(file);
+        }
+    
+        // End visualization
+        clearDropOverlay();
     });
+
+    function clearDropOverlay() {
+        div.classList.remove("drop-target");
+        extraContainer?.remove();
+        extraContainer = null;
+    }
   }
   
   export {
@@ -400,6 +520,7 @@ function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageE
     resize,
     rescale,
     crop,
+    combine,
     applyTargetToSource,
     applySourceToTarget,
   }
