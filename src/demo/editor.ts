@@ -179,7 +179,7 @@ function combine<T, U>(img1: PixelMap<T>, img2: PixelMap<U>, mapping: ((c1: T, c
         const width = img1.width, height = img1.height;
         const fx = (img2.width - 1) / (img1.width - 1), fy = (img2.height - 1) / (img1.height - 1);
         const relfx = 1 / (width - 1), relfy = 1 / (height - 1);
-        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.getSmooth(x * fx, y * fy), x * relfx, y * relfy));
+        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.get(x * fx, y * fy), x * relfx, y * relfy));
     } else {
         // Absolute coords using min size of both images
         const width = Math.min(img1.width, img2.width);
@@ -198,7 +198,7 @@ function combine3<T, U, V>(img1: PixelMap<T>, img2: PixelMap<U>, img3: PixelMap<
         const fx2 = (img2.width - 1) / (img1.width - 1), fy2 = (img2.height - 1) / (img1.height - 1);
         const fx3 = (img3.width - 1) / (img1.width - 1), fy3 = (img3.height - 1) / (img1.height - 1);
         const relfx = 1 / (width - 1), relfy = 1 / (height - 1);
-        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.getSmooth(x * fx2, y * fy2), img3.getSmooth(x * fx3, y * fy3), x * relfx, y * relfy));
+        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.get(x * fx2, y * fy2), img3.get(x * fx3, y * fy3), x * relfx, y * relfy));
     } else {
         // Absolute coords using min size of both images
         const width = Math.min(img1.width, img2.width);
@@ -211,7 +211,7 @@ function combine3<T, U, V>(img1: PixelMap<T>, img2: PixelMap<U>, img3: PixelMap<
 
 function resize(width: number, height: number = width) {
     const map = targetToPixelmap();
-    const cnv = map.toCanvas();
+    const cnv = map.toCanvas() as HTMLCanvasElement;
     targetCanvas.width = width;
     targetCanvas.height = height;
     targetContext.drawImage(cnv, 0, 0, width, height);
@@ -221,7 +221,7 @@ function crop(width: number, height: number = width, relAnchorX = 0, relAnchorY 
     const wDiff = targetCanvas.width - width, hDiff = targetCanvas.height - height;
     const offX = -relAnchorX * wDiff, offY = -relAnchorY * hDiff;
     const map = targetToPixelmap();
-    const cnv = map.toCanvas();
+    const cnv = map.toCanvas() as HTMLCanvasElement;
     targetCanvas.width = width;
     targetCanvas.height = height;
     targetContext.drawImage(cnv, offX, offY);
@@ -234,7 +234,7 @@ function rescale(fx: number, fy = fx) {
 
 function mirror() {
     const map = targetToPixelmap();
-    const cnv = map.toCanvas();
+    const cnv = map.toCanvas() as HTMLCanvasElement;
     targetCanvas.width = targetCanvas.width;
     targetContext.save();
     targetContext.translate(cnv.width, 0);
@@ -245,7 +245,7 @@ function mirror() {
 
 function flip() {
     const map = targetToPixelmap();
-    const cnv = map.toCanvas();
+    const cnv = map.toCanvas() as HTMLCanvasElement;
     targetContext.drawImage(cnv, 0, cnv.height, cnv.width, -cnv.height);
 }
 

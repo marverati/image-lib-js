@@ -5,6 +5,8 @@
         "dom"
       ],
       "isolatedModules": true,
-      "experimentalDecorators": true
+      "experimentalDecorators": true,
+      "moduleResolution": "node",
+      "types": ["node"]
     }
 }

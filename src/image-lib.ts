@@ -1,3 +1,4 @@
+import { Canvas, CanvasRenderingContext2D, createCanvas, Image } from "canvas";
 import { Color, ColorRGB, ImageChannelFilter, ImageFilter, ImageGenerator, PixelMap } from "./PixelMap";
 
 
@@ -8,18 +9,37 @@ export function isConstructingPixelmap(): PixelMap<any> | null {
 
 export class ImageLib {
 
+    public static generate(gen: Color | ImageGenerator<Color>, width: number, height: number): RGBAPixelMap;
+    public static generate(gen: ColorRGB | ImageGenerator<ColorRGB>, width: number, height: number): RGBPixelMap;
+    public static generate(gen: number | ImageGenerator<number>, width: number, height: number): GrayscalePixelMap;
+    public static generate(gen: boolean | ImageGenerator<boolean>, width: number, height: number): BoolPixelMap;
+
     public static generate(gen: Colorizable | ImageGenerator<Colorizable>, width: number, height = width) {
+        const example = gen instanceof Function ? gen(0, 0) : gen;
+        if (example instanceof Array) {
+            if (example.length >= 4) {
+                return new RGBAPixelMap(width, height, gen as ImageGenerator<Color>);
+            } else {
+                return new RGBPixelMap(width, height, gen as ImageGenerator<ColorRGB>);
+            }
+        } else if (typeof example === "number") {
+            return new GrayscalePixelMap(width, height, gen as ImageGenerator<number>);
+        } else if (typeof example === "boolean"){
+            return new BoolPixelMap(width, height, gen as ImageGenerator<boolean>);
+        }
+        // Should never happen
+        console.warn("Unknown type of image generator: ", gen);
         return new RGBAPixelMap(width, height, gen);
     }
 
-    public static gen = ImageLib.generate;
+    public static gen = this.generate;
 
     public static filter() {
-
+        // TODO
     }
 
-    public static createCanvas(width: number, height = width): HTMLCanvasElement {
-        const cnv = document.createElement('canvas');
+    public static createCanvas(width: number, height = width): HTMLCanvasElement | Canvas {
+        const cnv = typeof document !== 'undefined' ? document.createElement('canvas') : createCanvas(width, height);
         cnv.width = width;
         cnv.height = height;
         return cnv;
@@ -27,19 +47,19 @@ export class ImageLib {
 
     public static createCanvasContext(width: number, height: number): CanvasRenderingContext2D {
         const cnv = this.createCanvas(width, height);
-        const ctx = cnv.getContext("2d")!;
+        const ctx = cnv.getContext("2d")! as CanvasRenderingContext2D;
         return ctx;
     }
 
-    public static createImageFromCanvas(canvas: HTMLCanvasElement): HTMLImageElement {
+    public static createImageFromCanvas(canvas: HTMLCanvasElement | Canvas): HTMLImageElement | Image {
         const img = new Image();
         img.src = canvas.toDataURL();
         return img;
     }
 
-    public static createCanvasFromImage(img: HTMLImageElement): HTMLCanvasElement {
-        const ctx = this.createCanvasContext(img.naturalWidth, img.naturalHeight);
-        ctx.drawImage(img, 0, 0);
+    public static createCanvasFromImage(img: HTMLImageElement | Image): HTMLCanvasElement | Canvas {
+        const ctx = this.createCanvasContext(img.naturalWidth ?? img.width, img.naturalHeight ?? img.height);
+        ctx.drawImage(img as Image, 0, 0);
         return ctx.canvas;
     }
 
@@ -180,9 +200,9 @@ export class RGBAPixelMap extends PixelMap<Color> {
 
     public static fromImage(img: HTMLImageElement): RGBAPixelMap {
         const cnv = ImageLib.createCanvasFromImage(img);
-        document.body.appendChild(cnv);
+        document.body.appendChild(cnv as HTMLCanvasElement);
         const w = img.naturalWidth;
-        const data = cnv.getContext("2d").getImageData(0, 0, w, img.naturalHeight).data;
+        const data = (cnv.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, w, img.naturalHeight).data;
         return new RGBAPixelMap(w, img.naturalHeight, (x: number, y: number) => {
             const p = 4 * (y * w + x);
             return [ data[p], data[p+1], data[p+2], data[p+3] ];
@@ -219,7 +239,7 @@ export class RGBPixelMap extends PixelMap<ColorRGB> {
 
     public static fromImage(img: HTMLImageElement): RGBPixelMap {
         const cnv = ImageLib.createCanvasFromImage(img);
-        const data = cnv.getContext("2d").getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
+        const data = (cnv.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
         return new RGBPixelMap(img.naturalWidth, img.naturalHeight, (x: number, y: number) => RGBPixelMap.fromColor(data[y][x]));
     }
 }
@@ -242,7 +262,7 @@ export class GrayscalePixelMap extends PixelMap<number> {
 
     public static fromImage(img: HTMLImageElement): GrayscalePixelMap {
         const cnv = ImageLib.createCanvasFromImage(img);
-        const data = cnv.getContext("2d").getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
+        const data = (cnv.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
         return new GrayscalePixelMap(img.naturalWidth, img.naturalHeight, (x: number, y: number) => GrayscalePixelMap.fromColor(data[y][x]));
     }
 }
@@ -259,7 +279,7 @@ export class BoolPixelMap extends PixelMap<boolean> {
 
     public static fromImage(img: HTMLImageElement): BoolPixelMap {
         const cnv = ImageLib.createCanvasFromImage(img);
-        const data = cnv.getContext("2d").getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
+        const data = (cnv.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
         return new BoolPixelMap(img.naturalWidth, img.naturalHeight, (x: number, y: number) => BoolPixelMap.fromColor(data[y][x]));
     }
 }

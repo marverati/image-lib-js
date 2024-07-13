@@ -1,3 +1,4 @@
+import { Canvas, Image } from "canvas";
 import { absMod, clamp } from "./demo/util";
 import { ImageLib } from "./image-lib";
 
@@ -18,7 +19,7 @@ export type PixelGetter<T> = (x: number, y: number) => T;
 
 export type WrapMode = "clamp" | "repeat" | "mirror" | "initial";
 
-export type InterpolationMode = "floor" | "nearest" | "bilinear" | "bicubic";
+export type InterpolationMode = "floor" | "nearest" | "bilinear" | "bicubic" | "stochastic";
 
 const WRAP_MODE_DEFAULT: WrapMode = "initial";
 
@@ -64,16 +65,6 @@ export abstract class PixelMap<T> {
         return this.data[y][x];
     }
 
-    getSmooth(x: number, y: number): T {
-        x = clamp(x, 0, this.width - 1);
-        y = clamp(y, 0, this.height - 1);
-        const x0 = Math.floor(x), y0 = Math.floor(y), x1 = Math.min(x0 + 1, this.width - 1), y1 = Math.min(y0 + 1, this.height - 1);
-        const fx = x - x0, fy = y - y0;
-        const cTop = this.blend(this.data[y0][x0], this.data[y0][x1], fx);
-        const cBtm = this.blend(this.data[y1][x0], this.data[y1][x1], fx);
-        return this.blend(cTop, cBtm, fy);
-    }
-
     setWrapMode(wrapMode: WrapMode) {
         if (wrapMode !== this.wrapMode) {
             this.wrapMode = wrapMode;
@@ -94,6 +85,28 @@ export abstract class PixelMap<T> {
                 return (x, y) => this.wrapGetter(Math.floor(x), Math.floor(y));
             case "nearest":
                 return (x, y) => this.wrapGetter(Math.round(x), Math.round(y));
+            case "stochastic":
+                return (x, y) => {
+                    const x0 = Math.floor(x), y0 = Math.floor(y), x1 = x0 + 1, y1 = y0 + 1;
+                    if (x === x0) {
+                        if (y === y0) {
+                            // X and Y are both integers
+                            return this.wrapGetter(x0, y0);
+                        }
+                        // X is integer, Y is not
+                        return Math.random() > (y - y0) ? this.wrapGetter(x0, y0) : this.wrapGetter(x0, y1);
+                    } else {
+                        if (y === y0) {
+                            // Y is integer, X is not
+                            return Math.random() > (x - x0) ? this.wrapGetter(x0, y0) : this.wrapGetter(x1, y0);
+                        } else {
+                            // Bilinear interpolation case, neither X nor Y are integers
+                            return Math.random() > (x - x0)
+                                ? (Math.random() > (y - y0) ? this.wrapGetter(x0, y0) : this.wrapGetter(x1, y0))
+                                : (Math.random() > (y - y0) ? this.wrapGetter(x0, y1) : this.wrapGetter(x1, y1));
+                        }
+                    }
+                }
             case "bilinear":
                 return (x, y) => {
                     const x0 = Math.floor(x), y0 = Math.floor(y), x1 = x0 + 1, y1 = y0 + 1;
@@ -112,7 +125,11 @@ export abstract class PixelMap<T> {
                             // Bilinear interpolation case, neither X nor Y are integers
                             const tl = this.wrapGetter(x0, y0), tr = this.wrapGetter(x1, y0);
                             const bl = this.wrapGetter(x0, y1), br = this.wrapGetter(x1, y1);
-                            return this.blend(this.blend(tl, tr, x - x0), this.blend(bl, br, x - x0), y - y0);
+                            return this.blend(
+                                this.blend(tl, tr, x - x0),
+                                this.blend(bl, br, x - x0),
+                                y - y0,
+                            );
                         
                         }
                     }
@@ -134,55 +151,6 @@ export abstract class PixelMap<T> {
                 return (x, y) => this.data[y]?.[x] ?? this.initialValue;
         }
     }
-
-    // getGetter(wrapMode: WrapMode, interpolationMode: InterpolationMode): PixelGetter<T> {
-    //     switch (wrapMode) {
-    //         case "clamp":
-    //             switch (interpolationMode) {
-    //                 case "floor":
-    //                     return (x, y) => this.data[Math.floor(clamp(y, 0, this.height - 1))][Math.floor(clamp(x, 0, this.width - 1))];
-    //                 case "nearest":
-    //                     return (x, y) => this.data[Math.round(clamp(y, 0, this.height - 1))][Math.round(clamp(x, 0, this.width - 1))];
-    //                 case "bilinear":
-    //                     return (x, y) => this.getSmooth(x, y);
-    //                 case "bicubic":
-    //                     return (x, y) => this.getSmooth(x, y);
-    //             }
-    //             break;
-    //         case "repeat":
-    //             switch (interpolationMode) {
-    //                 case "floor":
-    //                     return (x, y) => this.data[y % this.height][x % this.width];
-    //                 case "nearest":
-    //                     return (x, y) => this.data[Math.round(y) % this.height][Math.round(x) % this.width];
-    //                 case "bilinear":
-    //                     return (x, y) => this.getSmooth(x, y);
-    //                 case "bicubic":
-    //                     return (x, y) => this.getSmooth(x, y);
-    //             }
-    //             break;
-    //         case "mirror":
-    //             switch (interpolationMode) {
-    //                 case "floor":
-    //                     return (x, y) => this.data[(y % (2 * this.height) + 2 * this.height) % this.height][(x % (2 * this.width) + 2 * this.width) % this.width];
-    //                 case "nearest":
-    //                     return (x, y) => this.data[Math.round(y) % (2 * this.height)][Math.round(x) % (2 * this.width)];
-    //                 case "bilinear":
-    //                     return (x, y) => this.getSmooth(x, y);
-    //                 case "bicubic":
-    //                     return (x, y) => this.getSmooth(x, y);
-    //             }
-    //             break;
-    //         case "initial":
-    //             switch (interpolationMode) {
-    //                 case "floor":
-    //                     return (x, y) => this.data[y] ? this.data[y][x] ?? this.initialValue : this.initialValue;
-    //                 case "nearest":
-    //                     return (x, y) => this.data[Math.round(y)] ? this.data[Math.round(y)][Math.round(x)] ?? this.initialValue : this.initialValue;
-    //             }
-    //             break;
-    //     }
-    // }
 
     forEach(processor: PixelProcessor<T>) {
         for (let y = 0; y < this.height; y++) {
@@ -223,22 +191,14 @@ export abstract class PixelMap<T> {
     crop(x0: number, y0: number, w = this.width - x0, h = this.height - y0): PixelMap<T> {
         const initial = this.initialValue;
         const other = this.clone(w, h);
-        other.fill((x, y) => this.data[y0 + y]?.[x0 + x] ?? initial);
-        return other;
+        return other.fill((x, y) => this.get(x0 + x, y0 + y));
     }
 
     resize(width: number, height: number): PixelMap<T> {
         const other = this.clone(width, height);
         const xf = (this.width - 1) / (width - 1);
         const yf = (this.height - 1) / (height - 1);
-        return other.fill((x, y) => {
-            const sx = x * xf, sy = y * yf;
-            const sx0 = Math.floor(sx), sy0 = Math.floor(sy), sx1 = Math.ceil(sx), sy1 = Math.ceil(sy);
-            const sfx = sx - sx0;
-            const top: T = this.blend(this.data[sy0][sx0], this.data[sy0][sx1], sfx);
-            const btm: T = this.blend(this.data[sy1][sx0], this.data[sy1][sx1], sfx);
-            return this.blend(top, btm, sy - sy0);
-        });
+        return other.fill((x, y) => this.get(x * xf, y * yf));
     }
 
     resizeSmooth(width: number, height: number): PixelMap<T> {
@@ -271,7 +231,7 @@ export abstract class PixelMap<T> {
 
     abstract blend(v1: T, v2: T, blendFactor: number): T;
 
-    toCanvas(canvas?: HTMLCanvasElement | null): HTMLCanvasElement {
+    toCanvas(canvas?: HTMLCanvasElement | null): HTMLCanvasElement | Canvas {
         if (canvas && canvas.width !== this.width) {
             canvas.width = this.width;
         }
@@ -279,7 +239,7 @@ export abstract class PixelMap<T> {
             canvas.height = this.height;
         }
         const ctx = canvas ? canvas.getContext("2d") : ImageLib.createCanvasContext(this.width, this.height);
-        const imageData = ctx.createImageData(this.width, this.height);
+        const imageData = ctx.createImageData(this.width, this.height) as ImageData;
         const data = imageData.data;
         // Apply pixel color
         this.forEach((x, y, value) => {
@@ -294,7 +254,7 @@ export abstract class PixelMap<T> {
         return ctx.canvas;
     }
 
-    toImage(): HTMLImageElement {
+    toImage(): HTMLImageElement | Image {
         const cnv = this.toCanvas();
         return ImageLib.createImageFromCanvas(cnv);
     }
