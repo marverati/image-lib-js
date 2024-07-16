@@ -17,4 +17,4 @@ show(gradientPreview, "gradient");
 
 // Create image based on gradient
 const map = ImageLib.generate((x, y) => gradient.get(0.5 + 0.5 * Math.sin(x / 50) * Math.sin(y / 50)), 512, 512);
-show(map, "example");
+show(map);

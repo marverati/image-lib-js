@@ -8,13 +8,20 @@ export function isConstructingPixelmap(): PixelMap<any> | null {
 }
 
 export class ImageLib {
+    public static width = 512;
+    public static height = 512;
 
-    public static generate(gen: Color | ImageGenerator<Color>, width: number, height: number): RGBAPixelMap;
-    public static generate(gen: ColorRGB | ImageGenerator<ColorRGB>, width: number, height: number): RGBPixelMap;
-    public static generate(gen: number | ImageGenerator<number>, width: number, height: number): GrayscalePixelMap;
-    public static generate(gen: boolean | ImageGenerator<boolean>, width: number, height: number): BoolPixelMap;
+    public static setDefaultSize(width = 512, height = width) {
+        this.width = width;
+        this.height = height;
+    }
 
-    public static generate(gen: Colorizable | ImageGenerator<Colorizable>, width: number, height = width) {
+    public static generate(gen: Color | ImageGenerator<Color>, width?: number, height?: number): RGBAPixelMap;
+    public static generate(gen: ColorRGB | ImageGenerator<ColorRGB>, width?: number, height?: number): RGBPixelMap;
+    public static generate(gen: number | ImageGenerator<number>, width?: number, height?: number): GrayscalePixelMap;
+    public static generate(gen: boolean | ImageGenerator<boolean>, width?: number, height?: number): BoolPixelMap;
+
+    public static generate(gen: Colorizable | ImageGenerator<Colorizable>, width = this.width, height = this.height) {
         const example = gen instanceof Function ? gen(0, 0) : gen;
         if (example instanceof Array) {
             if (example.length >= 4) {
@@ -32,20 +39,37 @@ export class ImageLib {
         return new RGBAPixelMap(width, height, gen);
     }
 
+    
+    public static generateRadial(gen: ImageGenerator<Color>, width?: number, height?: number): RGBAPixelMap;
+    public static generateRadial(gen: ImageGenerator<ColorRGB>, width?: number, height?: number): RGBPixelMap;
+    public static generateRadial(gen: ImageGenerator<number>, width?: number, height?: number): GrayscalePixelMap;
+    public static generateRadial(gen: ImageGenerator<boolean>, width?: number, height?: number): BoolPixelMap;
+
+    public static generateRadial(gen: ImageGenerator<Colorizable>, width = this.width, height = this.height) {
+        const xMid = width / 2, yMid = height / 2;
+        const wrappedGen: ImageGenerator<Colorizable> = (x: number, y: number) => {
+            const dx = x - xMid, dy = y - yMid;
+            const angle = Math.atan2(dy, dx);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            return gen(angle, dist);
+        }
+        return (ImageLib.generate as any)(wrappedGen, width, height); // TODO: find proper solution for typing
+    }
+
     public static gen = this.generate;
 
     public static filter() {
         // TODO
     }
 
-    public static createCanvas(width: number, height = width): HTMLCanvasElement | Canvas {
+    public static createCanvas(width = this.width, height = this.height): HTMLCanvasElement | Canvas {
         const cnv = typeof document !== 'undefined' ? document.createElement('canvas') : createCanvas(width, height);
         cnv.width = width;
         cnv.height = height;
         return cnv;
     }
 
-    public static createCanvasContext(width: number, height: number): CanvasRenderingContext2D {
+    public static createCanvasContext(width = this.width, height = this.height): CanvasRenderingContext2D {
         const cnv = this.createCanvas(width, height);
         const ctx = cnv.getContext("2d")! as CanvasRenderingContext2D;
         return ctx;
