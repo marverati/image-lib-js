@@ -22,8 +22,8 @@ const initialPositions = [
     { x: 10, y: 10 },
 ];
 
-const width = 512;
-const height = 512;
+const width = 1536;
+const height = 1536;
 
 const zoom = 1;
 const viewX = 0;
@@ -51,7 +51,7 @@ const map = ImageLib.generate((x, y) => {
     return [distances[0], distances[1], distances[2]];
     // const angle = Math.atan2(particles[0].y, particles[0].x);
     // return mapRange(angle, -Math.PI, Math.PI, 0, 255);
-}, 512, 512);
+}, width, height);
 show(map);
 
 function updateParticles(particles: Particle[]) {
