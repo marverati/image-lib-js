@@ -22,8 +22,8 @@ const initialPositions = [
     { x: 10, y: 10 },
 ];
 
-const width = 1536;
-const height = 1536;
+const width = 512;
+const height = width;
 
 const zoom = 1;
 const viewX = 0;
