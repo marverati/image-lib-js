@@ -53,7 +53,7 @@ export function boxBlur(map: RGBAPixelMap, dx: number, dy = dx): RGBAPixelMap {
     return blurMap;
 }
 
-load('output/result.png').then(map => {
+require.main === module && load('output/result.png').then(map => {
     const result = boxBlur(map, 5);
     show(result, "filtered");
-})
+});

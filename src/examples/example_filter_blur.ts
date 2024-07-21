@@ -10,7 +10,7 @@ export function blur(map: RGBAPixelMap, dx: number, dy = dx): RGBAPixelMap {
     return twice;
 }
 
-load('output/result.png').then(map => {
+require.main === module && load('output/result.png').then(map => {
     const result = blur(map, 20);
     show(result, "filtered");
-})
+});

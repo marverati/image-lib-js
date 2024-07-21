@@ -4,7 +4,7 @@ import { Color } from "../PixelMap";
 import { show, load } from "./util";
 
 
-load('output/result.png').then(map => {
+require.main === module && load('output/result.png').then(map => {
     const result = ImageLib.filter(map, (c: Color, x, y) => map.get(x, map.height - 1 - y));
     show(result, "filtered");
 })

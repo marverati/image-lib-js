@@ -59,10 +59,10 @@ export class ImageLib {
     public static gen = this.generate;
 
     
-    public static filter(map: RGBAPixelMap, mapping: (c: Color, x: number, y: number) => Color): RGBAPixelMap;
-    public static filter(map: RGBPixelMap, mapping: (c: ColorRGB, x: number, y: number) => ColorRGB): RGBPixelMap;
-    public static filter(map: GrayscalePixelMap, mapping: (c: number, x: number, y: number) => number): GrayscalePixelMap;
-    public static filter(map: BoolPixelMap, mapping: (c: boolean, x: number, y: number) => boolean): BoolPixelMap;
+    public static filter<T>(map: PixelMap<T>, mapping: (c: T, x: number, y: number) => Color): RGBAPixelMap;
+    public static filter<T>(map: PixelMap<T>, mapping: (c: T, x: number, y: number) => ColorRGB): RGBPixelMap;
+    public static filter<T>(map: PixelMap<T>, mapping: (c: T, x: number, y: number) => number): GrayscalePixelMap;
+    public static filter<T>(map: PixelMap<T>, mapping: (c: T, x: number, y: number) => boolean): BoolPixelMap;
 
     public static filter<T, Q>(map: PixelMap<T>, mapping: (c: T, x: number, y: number) => Q): PixelMap<Q> {
         const generatorFunc = (x: number, y: number) => mapping(map.getFast(x, y), x, y);

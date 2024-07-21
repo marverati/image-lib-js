@@ -7,7 +7,7 @@ import { show, load } from "./util";
 const ANGLE_PARTS = 16;
 const tau = 2 * Math.PI;
 
-load('output/result.png').then(map => {
+require.main === module && load('output/result.png').then(map => {
 
     map.setWrapMode("mirror");
 
@@ -23,4 +23,4 @@ load('output/result.png').then(map => {
         return map.get(nx, ny);
     });
     show(result, "filtered");
-})
+});
