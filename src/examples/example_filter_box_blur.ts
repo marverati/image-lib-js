@@ -44,7 +44,7 @@ export function boxBlur(map: RGBAPixelMap, dx: number, dy = dx): RGBAPixelMap {
         const x1 = Math.max(0, x - offX), y1 = Math.max(0, y - offY);
         const x2 = Math.min(map.width - 1, x + offX2), y2 = Math.min(map.height - 1, y + offY2);
         const pixels = (x2 - x1) * (y2 - y1);
-        const result: Color = c;
+        const result: Color = c.slice() as Color;
         for (let i = 0; i < 3; i++) {
             result[i] = (sums[y2][x2][i] - sums[y2][x1][i] - sums[y1][x2][i] + sums[y1][x1][i]) / pixels;
         }

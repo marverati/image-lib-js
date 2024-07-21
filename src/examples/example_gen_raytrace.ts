@@ -3,8 +3,8 @@ import { ImageLib } from "../image-lib";
 import { ColorRGB } from "../PixelMap";
 import { show } from "./util";
 
-const STEPS = 1000;
-const STEP_SIZE = 0.4;
+const STEPS = 2000;
+const STEP_SIZE = 0.1;
 
 const spheres = [
     {x: -10, y: 0, z: 40, r: 10},
@@ -52,12 +52,24 @@ function getRaytracingResult(x: number, y: number, z: number, dx: number, dy: nu
         z += dz;
     }
     // Generate color based on final coordinate
+    x += 1000 * dx;
+    y += 1000 * dy;
+    z += 1000 * dz;
     const dis = Math.sqrt(x * x + y * y + z * z);
     const f = 1 / Math.max(dis, 0.001);
     x *= f;
     y *= f;
     z *= f;
-    return [127.5 + 127.5 * x, 127.5 + 127.5 * y, 127.5 + 127.5 * z];
+    const result: ColorRGB = [127.5 + 127.5 * x, 127.5 + 127.5 * y, 127.5 + 127.5 * z];
+    const ax = Math.abs(x), ay = Math.abs(y), az = Math.abs(z);
+    if (ax > ay && ax > az) {
+        result[0] = 255 - result[0];
+    } else if (ay > az) {
+        result[1] = 255 - result[1];
+    } else {
+        result[2] = 255 - result[2];
+    }
+    return result;
 }
 
 function isPointInSphere(x: number, y: number, z: number, cx: number, cy: number, cz: number, r: number): boolean {
