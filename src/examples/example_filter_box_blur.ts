@@ -1,7 +1,7 @@
 
 import { ImageLib, RGBAPixelMap } from "../image-lib";
 import { Color, PixelMap } from "../PixelMap";
-import { show, load } from "./util";
+import { save, load } from "./util";
 
 
 export function boxBlur(map: RGBAPixelMap, dx: number, dy = dx): RGBAPixelMap {
@@ -55,5 +55,5 @@ export function boxBlur(map: RGBAPixelMap, dx: number, dy = dx): RGBAPixelMap {
 
 require.main === module && load('output/result.png').then(map => {
     const result = boxBlur(map, 5);
-    show(result, "filtered");
+    save(result, "filtered");
 });

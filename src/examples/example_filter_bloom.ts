@@ -1,7 +1,7 @@
 
 import { ImageLib, RGBAPixelMap } from "../image-lib";
 import { blur } from "./example_filter_blur";
-import { show, load } from "./util";
+import { save, load } from "./util";
 
 export function bloom(map: RGBAPixelMap, dx: number, dy = dx, blurStrength = 1): RGBAPixelMap {
     const blurred = blur(map, dx, dy);
@@ -19,5 +19,5 @@ export function bloom(map: RGBAPixelMap, dx: number, dy = dx, blurStrength = 1):
 
 require.main === module && load('output/result.png').then(map => {
     const filterResult = bloom(map, 20, 20, 0.85);
-    show(filterResult, "filtered");
+    save(filterResult, "filtered");
 });

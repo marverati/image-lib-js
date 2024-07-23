@@ -4,7 +4,7 @@ import { ImageLib } from "../image-lib";
 import ColorGradient from "../utility/ColorGradient";
 import { Interpolators } from "../utility/interpolation";
 import { fractalPerlin2D, perlin2D } from "../utility/perlin";
-import { show } from "./util";
+import { save } from "./util";
 
 ImageLib.setDefaultSize(512, 512);
 
@@ -27,4 +27,4 @@ const map = ImageLib.generate((x, y) => {
     return gradient.get(fade * noise);
 })
 
-show(map);
+save(map);

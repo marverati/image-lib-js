@@ -1,7 +1,7 @@
 
 import { ImageLib } from "../image-lib";
 import { ColorRGB } from "../PixelMap";
-import { show } from "./util";
+import { save } from "./util";
 
 const STEPS = 2000;
 const STEP_SIZE = 0.1;
@@ -19,7 +19,7 @@ const map = ImageLib.generate((x, y) => {
     const color = getRaytracingResult(0, 0, 0, rayDX, rayDY, rayDZ);
     return color;
 }, 512, 512);
-show(map);
+save(map);
 
 function getRaytracingResult(x: number, y: number, z: number, dx: number, dy: number, dz: number): ColorRGB {
     for (let s = 0; s < STEPS; s++) {

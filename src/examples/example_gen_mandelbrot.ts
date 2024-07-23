@@ -1,6 +1,6 @@
 
 import { ImageLib } from "../image-lib";
-import { show } from "./util";
+import { save } from "./util";
 
 const ITERATIONS = 256;
 
@@ -21,4 +21,4 @@ const map = ImageLib.generate((x, y) => {
     }
     return i >= 256 ? 0 : i;
 }, 512, 512);
-show(map);
+save(map);

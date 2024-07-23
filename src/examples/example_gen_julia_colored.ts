@@ -2,7 +2,7 @@
 import { ImageLib } from "../image-lib";
 import ColorGradient from "../utility/ColorGradient";
 import { Interpolators } from "../utility/interpolation";
-import { show } from "./util";
+import { save } from "./util";
 
 const ITERATIONS = 256;
 
@@ -36,4 +36,4 @@ const map = ImageLib.generate((x, y) => {
     const c = i >= ITERATIONS ? 0 : i / ITERATIONS;
     return gradient.get(c);
 }, 512, 512);
-show(map);
+save(map);

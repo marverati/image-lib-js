@@ -1,6 +1,6 @@
 
 import { ImageLib } from "../image-lib";
-import { show } from "./util";
+import { save } from "./util";
 
 const rowHeight = 24;
 const brickWidth = 48;
@@ -14,4 +14,4 @@ const map = ImageLib.generate((x, y) => {
     const isInGap = xInBrick < gapWidth || yInRow < gapWidth;
     return isInGap ? 0 : 255;
 }, 512, 512);
-show(map);
+save(map);

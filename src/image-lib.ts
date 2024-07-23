@@ -69,6 +69,12 @@ export class ImageLib {
         return (this.generate as any)(generatorFunc, map.width, map.height);
     }
 
+    public static combine<T, U, V>(a: PixelMap<T>, b: PixelMap<U>, mapping: (a: T, b: U, x: number, y: number) => V): PixelMap<V> {
+        // TODO: support different sizes
+        const generatorFunc = (x: number, y: number) => mapping(a.getFast(x, y), b.getFast(x, y), x, y);
+        return (this.generate as any)(generatorFunc, a.width, a.height);
+    }
+
     public static createCanvas(width = this.width, height = this.height): HTMLCanvasElement | Canvas {
         const cnv = typeof document !== 'undefined' ? document.createElement('canvas') : createCanvas(width, height);
         cnv.width = width;
@@ -238,6 +244,22 @@ export class RGBAPixelMap extends PixelMap<Color> {
             const p = 4 * (y * w + x);
             return [ data[p], data[p+1], data[p+2], data[p+3] ];
         });
+    }
+
+    public extractR(): GrayscalePixelMap {
+        return new GrayscalePixelMap(this.width, this.height, (x, y) => this.data[y][x][0]);
+    }
+
+    public extractG(): GrayscalePixelMap {
+        return new GrayscalePixelMap(this.width, this.height, (x, y) => this.data[y][x][1]);
+    }
+
+    public extractB(): GrayscalePixelMap {
+        return new GrayscalePixelMap(this.width, this.height, (x, y) => this.data[y][x][2]);
+    }
+
+    public extractA(): GrayscalePixelMap {
+        return new GrayscalePixelMap(this.width, this.height, (x, y) => this.data[y][x][3]);
     }
 }
 export const ColorMap = RGBAPixelMap;

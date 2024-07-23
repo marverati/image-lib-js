@@ -3,10 +3,20 @@ import { PixelMap } from "../PixelMap";
 import * as fs from "fs";
 import { RGBAPixelMap } from "../image-lib";
 
-export function show<T>(map: PixelMap<T>, filename: string = "result") {
+export function save<T>(map: PixelMap<T>, filename: string = "result") {
     const canvas = map.toCanvas() as Canvas;
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync('output/' + filename + '.png', buffer);
+}
+
+export async function loadOrGenerate(filename: string, generator: () => Promise<RGBAPixelMap>): Promise<RGBAPixelMap> {
+    try {
+        return await load(filename);
+    } catch (e) {
+        const map = await generator();
+        save(map, filename);
+        return map;
+    }
 }
 
 export async function load(filename: string): Promise<RGBAPixelMap> {

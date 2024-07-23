@@ -2,7 +2,7 @@
 import { ImageLib } from "../image-lib";
 import ColorGradient from "../utility/ColorGradient";
 import { Interpolators } from "../utility/interpolation";
-import { show } from "./util";
+import { save } from "./util";
 
 const waveXAmp = 0;
 const waveXFreq = 1 / 180;
@@ -32,4 +32,4 @@ const map = ImageLib.generate((x, y) => {
     }
     return colors.get((y - y1) / (y2 - y1));
 }, 512, 512);
-show(map);
+save(map);

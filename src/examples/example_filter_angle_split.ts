@@ -2,7 +2,7 @@
 import { absMod } from "../demo/util";
 import { ImageLib } from "../image-lib";
 import { Color } from "../PixelMap";
-import { show, load } from "./util";
+import { save, load } from "./util";
 
 const ANGLE_PARTS = 16;
 const tau = 2 * Math.PI;
@@ -22,5 +22,5 @@ require.main === module && load('output/result.png').then(map => {
         const ny = midy + dis * Math.cos(fixedAngle);
         return map.get(nx, ny);
     });
-    show(result, "filtered");
+    save(result, "filtered");
 });

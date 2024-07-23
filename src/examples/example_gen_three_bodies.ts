@@ -1,7 +1,7 @@
 
 import { mapRange } from "../demo/util";
 import { ImageLib } from "../image-lib";
-import { show } from "./util";
+import { save } from "./util";
 
 const FORCE_FACTOR = 0.1;
 const ITERATIONS = 500;
@@ -52,7 +52,7 @@ const map = ImageLib.generate((x, y) => {
     // const angle = Math.atan2(particles[0].y, particles[0].x);
     // return mapRange(angle, -Math.PI, Math.PI, 0, 255);
 }, width, height);
-show(map);
+save(map);
 
 function updateParticles(particles: Particle[]) {
     // Update forces
