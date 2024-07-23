@@ -69,9 +69,21 @@ export class ImageLib {
         return (this.generate as any)(generatorFunc, map.width, map.height);
     }
 
-    public static combine<T, U, V>(a: PixelMap<T>, b: PixelMap<U>, mapping: (a: T, b: U, x: number, y: number) => V): PixelMap<V> {
-        // TODO: support different sizes
-        const generatorFunc = (x: number, y: number) => mapping(a.getFast(x, y), b.getFast(x, y), x, y);
+    public static combine<T, U>(a: PixelMap<T>, b: PixelMap<U>, mapping: (a: T, b: U, x: number, y: number) => Color): RGBAPixelMap;
+    public static combine<T, U>(a: PixelMap<T>, b: PixelMap<U>, mapping: (a: T, b: U, x: number, y: number) => ColorRGB): RGBPixelMap;
+    public static combine<T, U>(a: PixelMap<T>, b: PixelMap<U>, mapping: (a: T, b: U, x: number, y: number) => number): GrayscalePixelMap;
+    public static combine<T, U>(a: PixelMap<T>, b: PixelMap<U>, mapping: (a: T, b: U, x: number, y: number) => boolean): BoolPixelMap;
+
+    public static combine<T, U, V>(a: PixelMap<T>, b: PixelMap<U>, mapping: (a: T, b: U, x: number, y: number) => V, stretchToFit = true): PixelMap<V> {
+        let generatorFunc: ImageGenerator<V>;
+        if (a.width === b.width && a.height === b.height) {
+            generatorFunc = (x: number, y: number) => mapping(a.getFast(x, y), b.getFast(x, y), x, y);
+        } else if (stretchToFit) {
+            const fx = (b.width - 1) / (a.width - 1), fy = (b.height - 1) / (a.height - 1);
+            generatorFunc = (x: number, y: number) => mapping(a.getFast(x, y), b.get(x * fx, y * fy), x, y);
+        } else {
+            generatorFunc = (x: number, y: number) => mapping(a.getFast(x, y), b.get(x, y), x, y);
+        }
         return (this.generate as any)(generatorFunc, a.width, a.height);
     }
 

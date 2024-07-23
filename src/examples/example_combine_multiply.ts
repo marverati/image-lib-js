@@ -15,8 +15,8 @@ export function multiply(map1: RGBAPixelMap, map2: RGBAPixelMap): RGBAPixelMap {
 }
 
 require.main === module && (async () => {
-    const map1 = await load('output/result.png');
-    const map2 = await load('output/filtered.png');
+    const map1 = await load('result');
+    const map2 = await load('filtered');
     const combined = multiply(map1, map2);
     save(combined, "combined");
 })();

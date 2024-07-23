@@ -17,7 +17,7 @@ export function bloom(map: RGBAPixelMap, dx: number, dy = dx, blurStrength = 1):
     return result;
 }
 
-require.main === module && load('output/result.png').then(map => {
+require.main === module && load('result').then(map => {
     const filterResult = bloom(map, 20, 20, 0.85);
     save(filterResult, "filtered");
 });

@@ -7,7 +7,14 @@ export function exposeToWindow(obj: Record<string, Object>) {
 
 export function mapRange(v: number, fromMin: number, fromMax: number, toMin: number, toMax: number, clampResult = false): number {
     const result = toMin + (v - fromMin) / (fromMax - fromMin) * (toMax - toMin);
-    return clampResult ? clamp(result, toMin, toMax) : result;
+    if (clampResult) {
+        if (toMin < toMax) {
+            return clamp(result, toMin, toMax);
+        } else {
+            return clamp(result, toMax, toMin);
+        }
+    }
+    return result;
 }
 
 export function getRangeMapper(fromMin: number, fromMax: number, toMin: number, toMax: number, clampResult = false): (v: number) => number {

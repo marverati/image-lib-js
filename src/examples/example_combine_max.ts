@@ -3,8 +3,8 @@ import { ImageLib, RGBAPixelMap } from "../image-lib";
 import { save, load } from "./util";
 
 require.main === module && (async () => {
-    const map1 = await load('output/result.png');
-    const map2 = await load('output/filtered.png');
+    const map1 = await load('result');
+    const map2 = await load('filtered');
     const combined = ImageLib.combine(map1, map2, (a, b) => {
         return [
             Math.max(a[0], b[0]),

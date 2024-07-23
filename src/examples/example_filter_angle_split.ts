@@ -7,7 +7,7 @@ import { save, load } from "./util";
 const ANGLE_PARTS = 16;
 const tau = 2 * Math.PI;
 
-require.main === module && load('output/result.png').then(map => {
+require.main === module && load('result').then(map => {
 
     map.setWrapMode("mirror");
 

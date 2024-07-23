@@ -15,8 +15,8 @@ export function filterMask(map1: RGBAPixelMap, map2: GrayscalePixelMap): RGBAPix
 }
 
 require.main === module && (async () => {
-    const map1 = await load('output/result.png');
-    const map2 = (await load('output/filtered.png')).extractR();
+    const map1 = await load('result');
+    const map2 = (await load('filtered')).extractR();
     const combined = filterMask(map1, map2);
     save(combined, "combined");
 })();

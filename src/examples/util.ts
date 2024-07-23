@@ -9,7 +9,7 @@ export function save<T>(map: PixelMap<T>, filename: string = "result") {
     fs.writeFileSync('output/' + filename + '.png', buffer);
 }
 
-export async function loadOrGenerate(filename: string, generator: () => Promise<RGBAPixelMap>): Promise<RGBAPixelMap> {
+export async function loadOrGenerate(filename: string, generator: () => RGBAPixelMap): Promise<RGBAPixelMap> {
     try {
         return await load(filename);
     } catch (e) {
@@ -20,6 +20,7 @@ export async function loadOrGenerate(filename: string, generator: () => Promise<
 }
 
 export async function load(filename: string): Promise<RGBAPixelMap> {
+    filename = 'output/' + filename + '.png';
     
     // Load the image from the file system
     const image = await loadImage(filename);

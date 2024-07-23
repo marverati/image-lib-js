@@ -12,8 +12,8 @@ export function displace(map1: RGBAPixelMap, map2: RGBAPixelMap, amplitudeX: num
 }
 
 require.main === module && (async () => {
-    const map1 = await load('output/result.png');
-    const map2 = await load('output/filtered.png');
+    const map1 = await load('result');
+    const map2 = await load('filtered');
     const combined = displace(map1, map2, 50);
     save(combined, "combined");
 })();
