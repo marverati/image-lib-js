@@ -58,4 +58,9 @@ export class BackendStorage extends DataStorage {
         const response = await this.customFetch(key, "DELETE");
         return !!response.success;
     }
+
+    public async getQuota(): Promise<number> {
+        // TODO
+        return 0;
+    }
 }

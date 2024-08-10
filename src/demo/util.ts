@@ -65,3 +65,13 @@ export function createElement(tag: string, className = "", content?: string | HT
     }
     return el;
 }
+
+export function getCookie(name: string): string | null {
+    const nameEQ = name + "=";
+    const parts = document.cookie.split(';');
+    const part = parts.find(p => p.trim().startsWith(nameEQ));
+    if (part) {
+        return part.trim().substring(nameEQ.length);
+    }
+    return null;
+}

@@ -39,4 +39,6 @@ export abstract class DataStorage {
 
     public abstract deleteValue(key: string): Promise<boolean>;
 
+    public abstract getQuota(): Promise<number>;
+
 }

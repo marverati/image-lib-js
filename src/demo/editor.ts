@@ -3,22 +3,28 @@ import { ImageGenerator, ImageFilter, ImageChannelFilter, Color, PixelMap } from
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
 import { clamp, createElement, exposeToWindow, getRangeMapper, mapRange, removeNonStandardCharacters } from "./util";
 import { examples } from "./examples";
-import { DataStorage } from "../storage/DataStorage";
 import { SmartStorage } from "../storage/SmartStorage";
+import { LoginWidget } from "./LoginWidget";
+import { QuotaWidget } from "./QuotaWidget";
 
 let editor: HTMLTextAreaElement;
 let sourceCanvas, targetCanvas: HTMLCanvasElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
 let generatorSize: { width: number, height: number} | null = null;
+let loginWidget: LoginWidget;
+let quotaWidget: QuotaWidget;
 
 let currentUserCodeName: string | null = null;
 let userCodes: Record<string, string> = {};
-const persistentStorage: DataStorage = new SmartStorage();
+const persistentStorage = new SmartStorage();
 
 const INITIAL_USER_CODE = `applySourceToTarget();
 
 // Your code here`
 let imageStorage: HTMLImageElement[] = [];
+
+const SNIPPET_NAMES_KEY = 'snippetNames';
+const SNIPPET_KEY_PREFIX = 'snippet___';
 
 window.addEventListener('load', () => {
     editor = document.getElementById("editor-text") as HTMLTextAreaElement;
@@ -27,6 +33,8 @@ window.addEventListener('load', () => {
     targetCanvas = document.getElementById("target-canvas") as HTMLCanvasElement;
     targetContext = targetCanvas.getContext("2d");
 
+    loginWidget = new LoginWidget(document.body, persistentStorage);
+
     // For our code snippets to work as a function based on raw text, we need to add classes to window scope
     exposeToWindow({
         sourceCanvas,
@@ -34,6 +42,7 @@ window.addEventListener('load', () => {
         context: targetContext,
         targetContext,
         sourceContext,
+        persistentStorage,
         saveCurrentSnippet,
         GrayscalePixelMap,
         RGBAPixelMap,
@@ -68,6 +77,7 @@ window.addEventListener('load', () => {
     })
 
     addExamples();
+    quotaWidget = new QuotaWidget(document.querySelector("#example-container"), persistentStorage);
     prepareTextarea();
 
     // Allow dropping images to load
@@ -280,6 +290,11 @@ async function addExamples() {
     btn.textContent = "New Snippet";
     btn.onclick = () => {
         saveCurrentSnippet();
+        // Check quota and avoid creating new snippet if quota is reached
+        if (quotaWidget.getVisibleQuota() >= 1) {
+            alert("You have reached your storage quota. Please delete some of your snippets before creating new ones.");
+            return;
+        }
         const name = createNewSnippet();
         if (name) {
             const button = document.createElement('button');
@@ -296,12 +311,15 @@ async function addExamples() {
     container.appendChild(btn);
     container.appendChild(document.createElement('BR'));
     // User snippets
-    const snippets = await persistentStorage.getValue('codes', null);
-    if (snippets) {
+    const snippetTitles = await persistentStorage.getValue(SNIPPET_NAMES_KEY);
+    if (snippetTitles) {
         try {
-            userCodes = JSON.parse(snippets);
-            const codeNames = Object.keys(userCodes);
+            const codeNames = JSON.parse(snippetTitles);
+            userCodes = {}
             for (const name of codeNames) {
+                // TODO: load individual snippets lazily rather than all at once
+                const code = await persistentStorage.getValue(SNIPPET_KEY_PREFIX + name);
+                userCodes[name] = code;
                 const button = document.createElement('button');
                 button.className = 'example snippet';
                 button.textContent = name;
@@ -338,19 +356,39 @@ function createNewSnippet(): string | null {
         currentUserCodeName = name;
         userCodes[name] = "// *** " + name + " ***\n" + INITIAL_USER_CODE;
         setEditorText(userCodes[name]);
+        saveSnippetNames();
         return name;
     }
+}
+
+function saveSnippetNames() {
+    persistentStorage.setValue(SNIPPET_NAMES_KEY, JSON.stringify(Object.keys(userCodes)));
 }
 
 function saveCurrentSnippet() {
     if (currentUserCodeName) {
         userCodes[currentUserCodeName] = getEditorText();
-        saveAllSnippets();
+        saveSnippet(currentUserCodeName);
     }
 }
 
 function saveAllSnippets() {
-    persistentStorage.setValue('codes', JSON.stringify(userCodes));
+    persistentStorage.setValue(SNIPPET_NAMES_KEY, JSON.stringify(Object.keys(userCodes)));
+    for (const key in userCodes) {
+        persistentStorage.setValue(SNIPPET_KEY_PREFIX + key, userCodes[key]);
+    }
+    quotaWidget.render();
+}
+
+function saveSnippet(key: string) {
+    if (userCodes[key]) {
+        persistentStorage.setValue(SNIPPET_KEY_PREFIX + key, userCodes[key]);
+    }
+}
+
+function deleteSnippet(key: string) {
+    delete userCodes[key];
+    persistentStorage.deleteValue(SNIPPET_KEY_PREFIX + key);
 }
 
 function runCode() {

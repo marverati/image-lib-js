@@ -110,4 +110,9 @@ export class GoogleDriveStorage extends DataStorage {
         // TODO
         return false;    
     }
+
+    public async getQuota(): Promise<number> {
+        // TODO
+        return 0;
+    }
 }
