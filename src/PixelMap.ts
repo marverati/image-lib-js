@@ -1,5 +1,5 @@
 import { Canvas, Image } from "canvas";
-import { absMod, clamp } from "./demo/util";
+import { absMod, clamp } from "./utility/util";
 import { ImageLib } from "./image-lib";
 
 

@@ -1,4 +1,4 @@
-import { absMod, clamp } from "../demo/util";
+import { absMod, clamp } from "../utility/util";
 import { ColorMap, RGBAPixelMap } from "../image-lib";
 import { Color, ColorRGB } from "../PixelMap";
 import { Interpolator, Interpolators } from "./interpolation";

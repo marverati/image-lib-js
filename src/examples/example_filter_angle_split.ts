@@ -1,5 +1,5 @@
 
-import { absMod } from "../demo/util";
+import { absMod } from "../utility/util";
 import { ImageLib } from "../image-lib";
 import { Color } from "../PixelMap";
 import { save, load } from "./util";
