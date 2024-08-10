@@ -4,6 +4,10 @@ import * as fs from "fs";
 import { RGBAPixelMap } from "../image-lib";
 
 export function save<T>(map: PixelMap<T>, filename: string = "result") {
+    // Ensure output directory exists
+    if (!fs.existsSync('output')) {
+        fs.mkdirSync('output');
+    }
     const canvas = map.toCanvas() as Canvas;
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync('output/' + filename + '.png', buffer);
