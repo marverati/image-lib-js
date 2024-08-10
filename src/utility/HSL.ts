@@ -79,3 +79,8 @@ export function hslaToRgba(hsla: ColorHSLA): Color {
     rgba.push(Math.round(hsla[3]));
     return rgba as number[] as Color;
 }
+
+export function getHueDiff(hue1: number, hue2: number): number {
+    const diff = Math.abs(hue1 - hue2) % 360;
+    return Math.min(diff, 360 - diff);
+}

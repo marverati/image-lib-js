@@ -1,5 +1,5 @@
 
-import { clamp, mapRange } from "../demo/util";
+import { clamp, mapRange } from "../utility/util";
 import { ImageLib } from "../image-lib";
 import ColorGradient from "../utility/ColorGradient";
 import { Interpolators } from "../utility/interpolation";

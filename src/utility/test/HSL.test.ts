@@ -1,4 +1,4 @@
-import { rgbToHsl, rgbaToHsla, hslToRgb, hslaToRgba } from '../HSL';
+import { rgbToHsl, rgbaToHsla, hslToRgb, hslaToRgba, getHueDiff } from '../HSL';
 
 describe('rgbToHsl', () => {
     test('converts pure red', () => {
@@ -101,5 +101,65 @@ describe('hslaToRgba', () => {
 
     test('converts same HSLA values', () => {
         expect(hslaToRgba([0, 0, 48, 125])).toEqual([122, 122, 122, 125]);
+    });
+});
+
+describe('getHueDiff', () => {
+    test('calculates difference between 0 and 0', () => {
+        expect(getHueDiff(0, 0)).toBe(0);
+    });
+
+    test('calculates difference between 0 and 120', () => {
+        expect(getHueDiff(0, 120)).toBe(120);
+        expect(getHueDiff(120, 0)).toBe(120);
+    });
+
+    test('calculates difference between 0 and 240', () => {
+        expect(getHueDiff(0, 240)).toBe(120);
+    });
+
+    test('calculates difference between 120 and 240', () => {
+        expect(getHueDiff(120, 240)).toBe(120);
+    });
+
+    test('calculates difference between 240 and 120', () => {
+        expect(getHueDiff(240, 120)).toBe(120);
+    });
+
+    test('calculates difference between 360 and 0', () => {
+        expect(getHueDiff(360, 0)).toBe(0);
+    });
+
+    test('calculates difference between 0 and 360', () => {
+        expect(getHueDiff(0, 360)).toBe(0);
+    });
+
+    test('calculates difference between 0 and -120', () => {
+        expect(getHueDiff(0, -120)).toBe(120);
+        expect(getHueDiff(-120, 0)).toBe(120);
+    });
+
+    test('calculates difference between 0 and -240', () => {
+        expect(getHueDiff(0, -240)).toBe(120);
+    });
+
+    test('calculates difference between 120 and -120', () => {
+        expect(getHueDiff(120, -120)).toBe(120);
+    });
+
+    test('calculates difference between 240 and -120', () => {
+        expect(getHueDiff(240, -120)).toBe(0);
+    });
+
+    test('calculates difference between 360 and -120', () => {
+        expect(getHueDiff(360, -120)).toBe(120);
+    });
+
+    test('calculates difference between 0 and 400', () => {
+        expect(getHueDiff(0, 400)).toBe(40);
+    });
+
+    test('calculates difference between 0 and 720', () => {
+        expect(getHueDiff(0, 720)).toBe(0);
     });
 });

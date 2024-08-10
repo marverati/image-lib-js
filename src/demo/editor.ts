@@ -1,11 +1,12 @@
 import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Colorizable, isConstructingPixelmap } from "../image-lib";
 import { ImageGenerator, ImageFilter, ImageChannelFilter, Color, PixelMap } from "../PixelMap";
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
-import { clamp, createElement, exposeToWindow, getRangeMapper, mapRange, removeNonStandardCharacters } from "./util";
+import { createElement, exposeToWindow, removeNonStandardCharacters } from "./util";
 import { examples } from "./examples";
 import { SmartStorage } from "../storage/SmartStorage";
 import { LoginWidget } from "./LoginWidget";
 import { QuotaWidget } from "./QuotaWidget";
+import { clamp, getRangeMapper, mapRange } from "../utility/util";
 
 let editor: HTMLTextAreaElement;
 let sourceCanvas, targetCanvas: HTMLCanvasElement;

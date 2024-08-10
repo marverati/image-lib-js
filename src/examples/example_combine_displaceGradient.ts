@@ -1,5 +1,5 @@
 
-import { clamp, mapRange } from "../demo/util";
+import { mapRange } from "../utility/util";
 import { ImageLib, RGBAPixelMap } from "../image-lib";
 import { save, load, loadOrGenerate } from "./util";
 

@@ -1,5 +1,5 @@
 
-import { mapRange } from "../demo/util";
+import { mapRange } from "../utility/util";
 import { ImageLib } from "../image-lib";
 import { save } from "./util";
 
