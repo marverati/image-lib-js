@@ -324,6 +324,13 @@ export class GrayscalePixelMap extends PixelMap<number> {
             return [c, c, c];
         })
     }
+    public toRGBA(): RGBAPixelMap {
+        return new RGBAPixelMap(this.width, this.height, (x, y) => {
+            const c = this.data[y][x];
+            return [c, c, c, 255];
+        })
+    }
+
 
     public static fromImage(img: HTMLImageElement): GrayscalePixelMap {
         const cnv = ImageLib.createCanvasFromImage(img);
