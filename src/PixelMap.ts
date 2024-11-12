@@ -1,5 +1,5 @@
 import { Canvas, Image } from "canvas";
-import { absMod, clamp } from "./utility/util";
+import { absMod, clamp, mirrorOutsideRange } from "./utility/util";
 import { ImageLib } from "./image-lib";
 
 
@@ -61,8 +61,12 @@ export abstract class PixelMap<T> {
         return currentlyConstructingPixelmap;
     }
 
-    getFast(x: number, y: number): T {
+    getFast(x: number, y: number): T | undefined {
         return this.data[y][x];
+    }
+
+    set(x: number, y: number, value: T): void {
+        this.data[y][x] = value;
     }
 
     setWrapMode(wrapMode: WrapMode) {
@@ -146,7 +150,7 @@ export abstract class PixelMap<T> {
             case "repeat":
                 return (x, y) => this.data[absMod(y, this.height)][absMod(x, this.width)];
             case "mirror":
-                return (x, y) => this.data[(absMod(y, 2 * this.height) + 2 * this.height) % this.height][(absMod(x, 2 * this.width) + 2 * this.width) % this.width];
+                return (x, y) => this.data[mirrorOutsideRange(y, 0, this.height - 1)][mirrorOutsideRange(x, 0, this.width - 1)];
             case "initial":
                 return (x, y) => this.data[y]?.[x] ?? this.initialValue;
         }
@@ -162,13 +166,25 @@ export abstract class PixelMap<T> {
         return this;
     }
 
+    some(predicate: (x: number, y: number, value: T) => boolean): boolean {
+        for (let y = 0; y < this.height; y++) {
+            const row = this.data[y];
+            for (let x = 0; x < this.width; x++) {
+                if (predicate(x, y, row[x])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     fill(generator: T | ImageGenerator<T>) {
         if (generator instanceof Function) {
             // Generator function
-            return this.forEach((x, y) => this.data[y][x] = (generator as ImageGenerator<T>)(x, y));
+            return this.forEach((x, y) => this.data[y][x] = generator(x, y));
         } else {
             // Constant values
-            return this.forEach((x, y) => this.data[y][x] = generator as T);
+            return this.forEach((x, y) => this.data[y][x] = generator);
         }
     }
 
@@ -196,8 +212,8 @@ export abstract class PixelMap<T> {
 
     resize(width: number, height: number): PixelMap<T> {
         const other = this.clone(width, height);
-        const xf = (this.width - 1) / (width - 1);
-        const yf = (this.height - 1) / (height - 1);
+        const xf = ((this.width - 1) / (width - 1)) ?? 1;
+        const yf = ((this.height - 1) / (height - 1)) ?? 1;
         return other.fill((x, y) => this.get(x * xf, y * yf));
     }
 
@@ -212,7 +228,7 @@ export abstract class PixelMap<T> {
         return this.resize(w, h);
     }
 
-    scaleSmooth(scaleX: number, scaleY: number): PixelMap<T> {
+    scaleSmooth(scaleX: number, scaleY = scaleX): PixelMap<T> {
         // Early exit in case regular scaling is equally good (smooth scaling only helps for shrinking images by more than 2x)
         if (scaleX >= 0.5 && scaleY >= 0.5) {
             return this.scale(scaleX, scaleY);

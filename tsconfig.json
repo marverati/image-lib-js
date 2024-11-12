@@ -9,6 +9,7 @@
     "moduleResolution": "node",
     "types": ["node", "jest"],
     "esModuleInterop": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "downlevelIteration": true
   }
 }

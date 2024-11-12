@@ -62,3 +62,13 @@ export function clamp(v: number, min: number, max: number): number {
 export function absMod(v: number, m: number): number {
     return ((v % m) + m) % m;
 }
+
+export function mirrorOutsideRange(v: number, min: number, max: number): number {
+    const fullRange = 2 * (max - min);
+    const value = min + absMod(v - min, fullRange);
+    if (value < max) {
+        return value;
+    } else {
+        return 2 * max - value;
+    }
+}

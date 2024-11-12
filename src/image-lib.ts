@@ -124,7 +124,12 @@ export class RGBAPixelMap extends PixelMap<Color> {
         if (initialValue instanceof Function) {
             initialValue = RGBAPixelMap.valueGeneratorToColor(initialValue);
         } else {
-            initialValue = RGBAPixelMap.valueToColor(initialValue);
+            if (initialValue instanceof Array) {
+                const value = initialValue;
+                initialValue = () => (RGBAPixelMap.valueToColor(value).slice() as Color);
+            } else {
+                initialValue = RGBAPixelMap.valueToColor(initialValue);
+            }
         }
         super(width, height, initialValue as Color | ImageGenerator<Color>);
     }
@@ -177,6 +182,15 @@ export class RGBAPixelMap extends PixelMap<Color> {
         }
     }
 
+    fill(generator: Colorizable | ImageGenerator<Colorizable>) {
+        if (!(generator instanceof Function)) {
+            const value = RGBAPixelMap.valueToColor(generator);
+            return super.fill(() => value.slice() as Color);
+        } else {
+            return super.fill((x, y) => RGBAPixelMap.valueToColor(generator(x, y)));
+        }
+    }
+
     filter(filter: ImageFilter<Color> | ((value: Color, x: number, y: number) => number)) {
         const wrappedFilterFunc = (c: Color, x: number, y: number) => {
             const result = filter(c, x, y);
@@ -213,7 +227,7 @@ export class RGBAPixelMap extends PixelMap<Color> {
 
     public toColor(v: Color): Color { return v; }
     public fromColor(v: Color): Color { return v; }
-    public clone(width = this.width, height = this.height) { return new RGBAPixelMap(width, height, (x, y) => this.data[y][x]); }
+    public clone(width = this.width, height = this.height) { return new RGBAPixelMap(width, height, (x, y) => this.get(x, y)); }
     public blend(a: Color, b: Color, f: number): Color {
         const alphaA = a[3] * (1 - f), alphaB = b[3] * f;
         const fullAlpha = Math.max(alphaA + alphaB, 0.001);
@@ -283,7 +297,7 @@ export class RGBPixelMap extends PixelMap<ColorRGB> {
     public toColor(v: ColorRGB): Color { return [v[0], v[1], v[2], 255]; }
     public static fromColor(c: Color): ColorRGB { return c.slice(0, 3) as ColorRGB; }
     public fromColor(c: Color) { return RGBPixelMap.fromColor(c); }
-    public clone(width = this.width, height = this.height) { return new RGBPixelMap(width, height, (x, y) => this.data[y][x]); }
+    public clone(width = this.width, height = this.height) { return new RGBPixelMap(width, height, (x, y) => this.get(x, y)); }
     public blend(a: ColorRGB, b: ColorRGB, f: number): ColorRGB {
         const f1 = 1 - f;
         return [
@@ -316,7 +330,7 @@ export class GrayscalePixelMap extends PixelMap<number> {
     public toColor(v: number): Color { return [v, v, v, 255]; }
     public static fromColor(c: Color): number { return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] }
     public fromColor(c: Color) { return GrayscalePixelMap.fromColor(c); }
-    public clone(width = this.width, height = this.height) { return new GrayscalePixelMap(width, height, (x, y) => this.data[y][x]); }
+    public clone(width = this.width, height = this.height) { return new GrayscalePixelMap(width, height, (x, y) => this.get(x, y)); }
     public blend(a: number, b: number, f: number): number { return f * b + (1 - f) * a; }
     public toRGB(): RGBPixelMap {
         return new RGBPixelMap(this.width, this.height, (x, y) => {
@@ -346,7 +360,7 @@ export class BoolPixelMap extends PixelMap<boolean> {
     public static fromColor(c: Color): boolean { return c[0] + c[1] + c[2] > 382.5; }
     public fromColor(c: Color) { return BoolPixelMap.fromColor(c); }
     public toColor(v: boolean): Color { const c = v ? 255 : 0; return [c, c, c, 255]; }
-    public clone(width = this.width, height = this.height) { return new BoolPixelMap(width, height, (x, y) => this.data[y][x]); }
+    public clone(width = this.width, height = this.height) { return new BoolPixelMap(width, height, (x, y) => this.get(x, y)); }
     public blend(a: boolean, b: boolean, f: number): boolean { return f > 0.5 ? b : a; }
 
     public static fromImage(img: HTMLImageElement): BoolPixelMap {
