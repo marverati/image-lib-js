@@ -24,7 +24,12 @@ export async function loadOrGenerate(filename: string, generator: () => RGBAPixe
 }
 
 export async function load(filename: string): Promise<RGBAPixelMap> {
-    filename = 'output/' + filename + '.png';
+    if (!filename.includes('.')) {
+        filename += '.png';
+    }
+    if (!filename.includes('/')) {
+        filename = 'output/' + filename;
+    }
     
     // Load the image from the file system
     const image = await loadImage(filename);
