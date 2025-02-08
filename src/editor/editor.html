@@ -93,14 +93,21 @@
             background-color: #eee;
         }
         .image-storage-preview {
+            display: inline-block;
             position: relative;
             width: 96px;
             height: 64px;
             background-color: white;
-            margin: 2px;
+            margin: 4px;
             border: 1px solid #aaa;
             font-family: sans-serif;
             text-shadow: 0 0 2px white;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .image-storage-preview.drop-target {
+            transform: scale(1.05);
+            box-shadow: 0 0 8px #0066ff80;
+            border-color: #0066ff;
         }
         .image-storage-preview img {
             position: absolute;

@@ -2,7 +2,7 @@ import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Colorizable, isConstructingP
 import { ImageGenerator, ImageFilter, ImageChannelFilter, Color, PixelMap } from "../PixelMap";
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
 import { createElement, exposeToWindow, removeNonStandardCharacters } from "../demo/util";
-import { examples } from "../demo/examples";
+import { examples } from "./examples";
 import { SmartStorage } from "../storage/SmartStorage";
 import { LoginWidget } from "../demo/LoginWidget";
 import { QuotaWidget } from "../demo/QuotaWidget";
@@ -131,7 +131,7 @@ function getStored(index: number): RGBAPixelMap | null {
 function updateStorage() {
     const container = document.getElementById("image-storage");
     container.innerHTML = "";
-    for (let i = imageStorage.length; i >= 0; i--) { // go one index further, to always show one empty option for user to drop image into
+    for (let i = 0; i <= imageStorage.length; i++) { // go one index further, to always show one empty option for user to drop image into
         const el = createElement("div", "image-storage-preview checkerboard", null, container);
         if (imageStorage[i]) {
             const img = createElement("img", "", "", el) as HTMLImageElement;
@@ -139,6 +139,7 @@ function updateStorage() {
         }
         createElement("span", "", `${i + 1}`, el);
         (el as any).storageIndex = i;
+        turnIntoImageDropTarget(el, () => {}, console.error);
     }
 }
 
@@ -496,7 +497,6 @@ function displayError(e: any) {
 
 function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageElement, fieldId: number, target: EventTarget) => void, handleError = (e: ErrorEvent) => {}, extraFields: string[] = []) {
     let extraContainer: HTMLElement | null = null;
-  
     // Set up event listeners for the drag and drop events
     div.addEventListener("dragover", (event) => {
         event.preventDefault();
@@ -514,7 +514,7 @@ function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageE
     });
   
     div.addEventListener("dragleave", (event) => {
-        if (event.target === document.body) {
+        if (event.target === div) {
             // End visualization
             clearDropOverlay();
         }
