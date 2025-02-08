@@ -22,7 +22,7 @@
 
         #preview-container canvas {
             flex: 0 0 1;
-            max-width: 45vw;
+            max-width: 45%;
             max-height: 40vh;
         }
 
@@ -124,7 +124,7 @@
             flex-direction: row;
             justify-content: space-around;
             align-items: flex-start;
-            margin: 24px 2.5vw;
+            margin: 24px 2%;
         }
 
         #editor-text {
@@ -191,30 +191,106 @@
             height: 100%;
         }
 
+        #file-tree-container {
+            display: flex;
+            flex-direction: row;
+            position: relative;
+            width: 250px; /* Initial width of the file tree */
+            transition: width 0.3s ease;
+            height: 100vh; /* Make it full height */
+        }
+
+        #file-tree {
+            width: 100%;
+            background-color: #f0f0f0;
+            border-right: 1px solid #ccc;
+            overflow-y: auto;
+            transition: width 0.3s ease;
+        }
+
+        #file-tree-toggle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            background-color: #ddd;
+            border: none;
+            cursor: pointer;
+            transition: right 0.3s ease;
+        }
+
+        #file-tree-container.collapsed {
+            width: 20px; /* Width when collapsed */
+        }
+
+        #file-tree-container.collapsed #file-tree {
+            width: 0;
+            overflow: hidden;
+        }
+
+        #file-tree-container.collapsed #file-tree-toggle {
+            right: -20px; /* Move the button to the border */
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .content-container {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
-    <div id="image-storage"></div>
-    <div id="preview-container">
-        <canvas id="source-canvas" class="checkerboard" width="1024" height="512"></canvas>
-        <canvas id="target-canvas" class="checkerboard" width="1024" height="512"></canvas>
-    </div>
-    <div id="editor-container">
-        <textarea id="editor-text"></textarea>
-        <div id="parameter-container">
-            <div id="parameter-empty-state">
-                <P>
-                    No parameters available. Use <code>param.toggle</code>, <code>param.slider</code> etc. in your code to make interactive parameters available here.
-                </P>
-                <P>
-                    Example: <code>const color = param.color("Color", "#ff0000ff")</code>
-                </P>
-                <P>
-                    You can also press TAB for help.
-                </P>
+    <div class="main-container">
+        <div id="file-tree-container">
+            <div id="file-tree">
+                <!-- File tree content goes here -->
             </div>
+            <button id="file-tree-toggle">☰</button>
+        </div>
+        <div class="content-container">
+            <div id="image-storage"></div>
+            <div id="preview-container">
+                <canvas id="source-canvas" class="checkerboard" width="1024" height="512"></canvas>
+                <canvas id="target-canvas" class="checkerboard" width="1024" height="512"></canvas>
+            </div>
+            <div id="editor-container">
+                <textarea id="editor-text"></textarea>
+                <div id="parameter-container">
+                    <div id="parameter-empty-state">
+                        <P>
+                            No parameters available. Use <code>param.toggle</code>, <code>param.slider</code> etc. in your code to make interactive parameters available here.
+                        </P>
+                        <P>
+                            Example: <code>const color = param.color("Color", "#ff0000ff")</code>
+                        </P>
+                        <P>
+                            You can also press TAB for help.
+                        </P>
+                    </div>
+                </div>
+            </div>
+            <div id="example-container"></div>
         </div>
     </div>
-    <div id="example-container"></div>
+    <script>
+        document.getElementById('file-tree-toggle').addEventListener('click', function() {
+            const container = document.getElementById('file-tree-container');
+            container.classList.toggle('collapsed');
+        });
+    </script>
 </body>
 </html>
