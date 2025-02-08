@@ -3,7 +3,8 @@ import { crop, filter, filterG, filterR, gen, rescale, resize } from "./editor";
 // Make compiler happy, even though examples will ultimately be executed in other scope and use global variables
 let width = 0, height = 0;
 
-function processExample(key, example) {
+function processExample(key: string, example: string) {
+    example = example.replaceAll('0, editor_1.', '');
     // Remove function wrapper
     if (example.startsWith('function ')) {
         const lines = example.split('\n');
