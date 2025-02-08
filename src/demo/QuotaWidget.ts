@@ -1,5 +1,6 @@
 import { SmartStorage } from "../storage/SmartStorage";
-import { createElement, clamp } from "./util";
+import { clamp } from "../utility/util";
+import { createElement } from "./util";
 
 const QUOTA_BUFFER = 0.03;
 
