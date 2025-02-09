@@ -1,4 +1,6 @@
-import { crop, filter, filterG, filterR, gen, rescale, resize } from "./editor";
+import { api } from "./editingApi";
+
+const { use, copy, copyTo, crop, filter, filterG, filterR, gen, rescale, resize } = api;
 
 // Make compiler happy, even though examples will ultimately be executed in other scope and use global variables
 let width = 0, height = 0;
@@ -83,6 +85,14 @@ const examplesArray = [
         // Adjust alpha
         filter(c => { c[3] = 255 - Math.max(c[0], c[1], c[2]) + Math.min(c[0], c[1], c[2]); return c })
     },
+    function slotUsage() {
+        copy(); // source -> target
+        filter(c => [255-c[0], c[1], c[2], c[3]]); // invert red
+        copyTo(1); // target -> slot 1
+        use(1); // work on slot 1
+        filter(c => [c[2], c[0], c[1], c[3]]); // flip channels
+        use(); // work on target
+    }
 ]
 
 export const examples = {}

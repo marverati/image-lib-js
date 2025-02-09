@@ -212,8 +212,8 @@ export abstract class PixelMap<T> {
 
     resize(width: number, height: number): PixelMap<T> {
         const other = this.clone(width, height);
-        const xf = ((this.width - 1) / (width - 1)) ?? 1;
-        const yf = ((this.height - 1) / (height - 1)) ?? 1;
+        const xf = (width > 1) ? ((this.width - 1) / (width - 1)) : 0;
+        const yf = (height > 1) ? ((this.height - 1) / (height - 1)) : 0;
         return other.fill((x, y) => this.get(x * xf, y * yf));
     }
 

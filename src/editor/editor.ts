@@ -7,11 +7,10 @@ import { SmartStorage } from "../storage/SmartStorage";
 import { LoginWidget } from "../demo/LoginWidget";
 import { QuotaWidget } from "../demo/QuotaWidget";
 import { clamp, getRangeMapper, mapRange } from "../utility/util";
+import { api, applyImage, generatorSize, initCanvases, initSlotUsage, sourceCanvas, targetCanvas, wrapImageInPixelMap } from "./editingApi";
 
 let editor: HTMLTextAreaElement;
-let sourceCanvas, targetCanvas: HTMLCanvasElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
-let generatorSize: { width: number, height: number} | null = null;
 let loginWidget: LoginWidget;
 let quotaWidget: QuotaWidget;
 
@@ -29,12 +28,20 @@ const SNIPPET_KEY_PREFIX = 'snippet___';
 
 window.addEventListener('load', () => {
     editor = document.getElementById("editor-text") as HTMLTextAreaElement;
-    sourceCanvas = document.getElementById("source-canvas") as HTMLCanvasElement;
+    initCanvases(
+        document.getElementById("source-canvas") as HTMLCanvasElement,
+        document.getElementById("target-canvas") as HTMLCanvasElement
+    );
+    initSlotUsage(
+        getImageFromSlot,
+        storeImageInSlot,
+    );
     sourceContext = sourceCanvas.getContext("2d");
-    targetCanvas = document.getElementById("target-canvas") as HTMLCanvasElement;
     targetContext = targetCanvas.getContext("2d");
 
     loginWidget = new LoginWidget(document.body, persistentStorage);
+
+    exposeToWindow(api);
 
     // For our code snippets to work as a function based on raw text, we need to add classes to window scope
     exposeToWindow({
@@ -48,26 +55,7 @@ window.addEventListener('load', () => {
         GrayscalePixelMap,
         RGBAPixelMap,
         ColorMap,
-        generate,
-        gen,
-        fill,
-        filter,
-        filterR,
-        filterG,
-        filterB,
-        filterA,
-        resize,
-        rescale,
-        crop,
-        mirror,
-        flip,
         wrap: wrapImageInPixelMap,
-        combine,
-        combine2: combine,
-        combine3,
-        applyImage: renderToTarget,
-        applyTargetToSource,
-        applySourceToTarget,
         getStored: getPixelMapFromSlot,
         getStoredImage: getImageFromSlot,
         perlin2D,
@@ -89,16 +77,11 @@ window.addEventListener('load', () => {
             storeImageInSlot(img, +index);
         } else {
             // As main picture
-            renderToSource(img);
-            applySourceToTarget();
+            applyImage(img, 0);
         }
     }, console.error);
     updateImageSlots();
 });
-
-function wrapImageInPixelMap(img: HTMLImageElement) {
-    return RGBAPixelMap.fromImage(img);
-}
 
 function storeImageInSlot<T>(img: HTMLImageElement | PixelMap<T>, id?: number) {
     const image = img instanceof PixelMap ? img.toImage() : img;
@@ -143,123 +126,6 @@ function updateImageSlots() {
     }
 }
 
-function generate(gen: Colorizable | ImageGenerator<Colorizable>, width = sourceCanvas.width, height = sourceCanvas.height) {
-    generatorSize = { width, height };
-    const map = new ColorMap(width, height, gen);
-    generatorSize = null;
-    renderToSource(map);
-    renderToTarget(map);
-    return map;
-}
-const gen = generate;
-const fill = generate;
-
-function filter(filterFunc: ImageFilter<Color>, map = targetToPixelmap()) {
-    map.filter(filterFunc);
-    renderToTarget(map);
-    return map;
-}
-
-function filterR(filter: ImageChannelFilter, map = targetToPixelmap()) {
-    map.filterR(filter);
-    renderToTarget(map);
-    return map;
-}
-
-function filterG(filter: ImageChannelFilter, map = targetToPixelmap()) {
-    map.filterG(filter);
-    renderToTarget(map);
-    return map;
-}
-
-function filterB(filter: ImageChannelFilter, map = targetToPixelmap()) {
-    map.filterB(filter);
-    renderToTarget(map);
-    return map;
-}
-
-function filterA(filter: ImageChannelFilter, map = targetToPixelmap()) {
-    map.filterA(filter);
-    renderToTarget(map);
-    return map;
-}
-
-function combine<T, U>(img1: PixelMap<T>, img2: PixelMap<U>, mapping: ((c1: T, c2: U, x: number, y: number) => Color), stretchRelative = false): RGBAPixelMap {
-    let result: RGBAPixelMap;
-    if (stretchRelative) {
-        // Relative 0...1 for both images, applying size of first image
-        const width = img1.width, height = img1.height;
-        const fx = (img2.width - 1) / (img1.width - 1), fy = (img2.height - 1) / (img1.height - 1);
-        const relfx = 1 / (width - 1), relfy = 1 / (height - 1);
-        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.get(x * fx, y * fy), x * relfx, y * relfy));
-    } else {
-        // Absolute coords using min size of both images
-        const width = Math.min(img1.width, img2.width);
-        const height = Math.min(img1.height, img2.height);
-        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.get(x,y), x, y));
-    }
-    renderToTarget(result);
-    return result;
-}
-
-function combine3<T, U, V>(img1: PixelMap<T>, img2: PixelMap<U>, img3: PixelMap<V>, mapping: ((c1: T, c2: U, c3: V, x: number, y: number) => Color), stretchRelative = false): RGBAPixelMap {
-    let result: RGBAPixelMap;
-    if (stretchRelative) {
-        // Relative 0...1 for both images, applying size of first image
-        const width = img1.width, height = img1.height;
-        const fx2 = (img2.width - 1) / (img1.width - 1), fy2 = (img2.height - 1) / (img1.height - 1);
-        const fx3 = (img3.width - 1) / (img1.width - 1), fy3 = (img3.height - 1) / (img1.height - 1);
-        const relfx = 1 / (width - 1), relfy = 1 / (height - 1);
-        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.get(x * fx2, y * fy2), img3.get(x * fx3, y * fy3), x * relfx, y * relfy));
-    } else {
-        // Absolute coords using min size of both images
-        const width = Math.min(img1.width, img2.width);
-        const height = Math.min(img1.height, img2.height);
-        result = new RGBAPixelMap(width, height, (x: number, y: number) => mapping(img1.get(x, y), img2.get(x,y), img3.get(x,y), x, y));
-    }
-    renderToTarget(result);
-    return result;
-}
-
-function resize(width: number, height: number = width) {
-    const map = targetToPixelmap();
-    const cnv = map.toCanvas() as HTMLCanvasElement;
-    targetCanvas.width = width;
-    targetCanvas.height = height;
-    targetContext.drawImage(cnv, 0, 0, width, height);
-}
-
-function crop(width: number, height: number = width, relAnchorX = 0, relAnchorY = relAnchorX) {
-    const wDiff = targetCanvas.width - width, hDiff = targetCanvas.height - height;
-    const offX = -relAnchorX * wDiff, offY = -relAnchorY * hDiff;
-    const map = targetToPixelmap();
-    const cnv = map.toCanvas() as HTMLCanvasElement;
-    targetCanvas.width = width;
-    targetCanvas.height = height;
-    targetContext.drawImage(cnv, offX, offY);
-}
-
-function rescale(fx: number, fy = fx) {
-    const w = Math.round(targetCanvas.width * fx), h = Math.round(targetCanvas.height * fy);
-    resize(w, h);
-}
-
-function mirror() {
-    const map = targetToPixelmap();
-    const cnv = map.toCanvas() as HTMLCanvasElement;
-    targetCanvas.width = targetCanvas.width;
-    targetContext.save();
-    targetContext.translate(cnv.width, 0);
-    targetContext.scale(-1, 1);
-    targetContext.drawImage(cnv, 0, 0);
-    targetContext.restore();
-}
-
-function flip() {
-    const map = targetToPixelmap();
-    const cnv = map.toCanvas() as HTMLCanvasElement;
-    targetContext.drawImage(cnv, 0, cnv.height, cnv.width, -cnv.height);
-}
 
 function prepareTextarea() {
     editor.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -400,72 +266,11 @@ function runCode() {
         const fnc = new Function(code);
         const result = fnc();
         if (result) {
-            renderToTarget(result);
+            applyImage(targetCanvas, -1);
         }
     } catch(e) {
         displayError(e);
     }
-}
-
-function renderToCanvas(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement, canvas: HTMLCanvasElement) {
-    if (result instanceof PixelMap) {
-        result.toCanvas(canvas);
-        return;
-    }
-    if (result instanceof Image || (result instanceof HTMLCanvasElement && result !== canvas)) {
-        if (result instanceof Image && result.naturalWidth === 0) {
-            // Wait for image to load
-            const img = result;
-            result.addEventListener('load', () => {
-                canvas.width = img.naturalWidth;
-                canvas.height = img.naturalHeight;
-                canvas.getContext("2d").drawImage(img, 0, 0);
-            });
-        } else {
-            // Render immediately
-            canvas.width = result instanceof Image ? result.naturalWidth : result.width;
-            canvas.height = result instanceof Image ? result.naturalHeight : result.height;
-            canvas.getContext("2d").drawImage(result, 0, 0);
-        }
-    }
-}
-
-function renderToTarget(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement) {
-    renderToCanvas(result, targetCanvas);
-}
-
-function renderToSource(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement) {
-    renderToCanvas(result, sourceCanvas);
-}
-
-function applyTargetToSource() {
-    renderToSource(targetCanvas);
-}
-
-function applySourceToTarget() {
-    renderToTarget(sourceCanvas);
-}
-
-function sourceToPixelmap(): RGBAPixelMap {
-    const w = sourceCanvas.width;
-    const imgData = sourceContext.getImageData(0, 0, w, sourceCanvas.height);
-    const data = imgData.data;
-    const map = new ColorMap(w, sourceCanvas.height, (x, y) => {
-        const p = 4 * (x + y * w);
-        return [ data[p], data[p + 1], data[p + 2], data[p + 3] ];
-    });
-    return map;
-}
-
-function targetToPixelmap(): RGBAPixelMap {
-    const w = targetCanvas.width;
-    const imgData = targetContext.getImageData(0, 0, w, targetCanvas.height);
-    const data = imgData.data;
-    const map = new ColorMap(w, targetCanvas.height, (x, y) => {
-        const p = 4 * (x + y * w);
-        return [ data[p], data[p + 1], data[p + 2], data[p + 3] ];
-    });
-    return map;
 }
 
 function prepareWindowScope() {
@@ -547,20 +352,4 @@ function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageE
         extraContainer?.remove();
         extraContainer = null;
     }
-  }
-  
-  export {
-    generate,
-    gen,
-    filter,
-    filterR,
-    filterG,
-    filterB,
-    filterA,
-    resize,
-    rescale,
-    crop,
-    combine,
-    applyTargetToSource,
-    applySourceToTarget,
-  }
+}
