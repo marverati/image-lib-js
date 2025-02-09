@@ -22,7 +22,7 @@ const persistentStorage = new SmartStorage();
 const INITIAL_USER_CODE = `applySourceToTarget();
 
 // Your code here`
-let imageStorage: HTMLImageElement[] = [];
+let imageSlots: HTMLImageElement[] = [];
 
 const SNIPPET_NAMES_KEY = 'snippetNames';
 const SNIPPET_KEY_PREFIX = 'snippet___';
@@ -68,8 +68,8 @@ window.addEventListener('load', () => {
         applyImage: renderToTarget,
         applyTargetToSource,
         applySourceToTarget,
-        getStored,
-        getStoredImage,
+        getStored: getPixelMapFromSlot,
+        getStoredImage: getImageFromSlot,
         perlin2D,
         fractalPerlin2D,
         clamp,
@@ -86,56 +86,56 @@ window.addEventListener('load', () => {
         if (target instanceof HTMLElement && ((target as any).storageIndex >= 0 || (target.parentElement as any).storageIndex >= 0)) {
             // Load to storage
             const index = (target as any).storageIndex ?? (target.parentElement as any).storageIndex;
-            storeImage(img, +index);
+            storeImageInSlot(img, +index);
         } else {
             // As main picture
             renderToSource(img);
             applySourceToTarget();
         }
     }, console.error);
-    updateStorage();
+    updateImageSlots();
 });
 
 function wrapImageInPixelMap(img: HTMLImageElement) {
     return RGBAPixelMap.fromImage(img);
 }
 
-function storeImage<T>(img: HTMLImageElement | PixelMap<T>, id?: number) {
+function storeImageInSlot<T>(img: HTMLImageElement | PixelMap<T>, id?: number) {
     const image = img instanceof PixelMap ? img.toImage() : img;
     if (!image || !(image instanceof HTMLImageElement)) {
         console.error("Invalid image: ", img);
         return;
     }
     if (id == null || id < 0) {
-        id = imageStorage.findIndex(v => v == null);
+        id = imageSlots.findIndex(v => v == null);
         if (id < 0) {
-            id = imageStorage.length;
+            id = imageSlots.length;
         }
     }
-    imageStorage[id] = image;
-    updateStorage();
+    imageSlots[id] = image;
+    updateImageSlots();
 }
 
-function getStoredImage(index: number): HTMLImageElement | null {
-    return imageStorage[index - 1] ?? null;
+function getImageFromSlot(index: number): HTMLImageElement | null {
+    return imageSlots[index - 1] ?? null;
 }
 
-function getStored(index: number): RGBAPixelMap | null {
-    const img = getStoredImage(index);
+function getPixelMapFromSlot(index: number): RGBAPixelMap | null {
+    const img = getImageFromSlot(index);
     if (img) {
         return wrapImageInPixelMap(img);
     }
     return null
 }
 
-function updateStorage() {
-    const container = document.getElementById("image-storage");
+function updateImageSlots() {
+    const container = document.getElementById("image-slots");
     container.innerHTML = "";
-    for (let i = 0; i <= imageStorage.length; i++) { // go one index further, to always show one empty option for user to drop image into
-        const el = createElement("div", "image-storage-preview checkerboard", null, container);
-        if (imageStorage[i]) {
+    for (let i = 0; i <= imageSlots.length; i++) { // go one index further, to always show one empty option for user to drop image into
+        const el = createElement("div", "image-slots-preview checkerboard", null, container);
+        if (imageSlots[i]) {
             const img = createElement("img", "", "", el) as HTMLImageElement;
-            img.src = imageStorage[i].src;
+            img.src = imageSlots[i].src;
         }
         createElement("span", "", `${i + 1}`, el);
         (el as any).storageIndex = i;

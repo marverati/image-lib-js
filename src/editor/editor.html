@@ -85,14 +85,14 @@
             box-shadow: 0px 0px 8px #f0000080; 
         }
 
-        #image-storage {
+        #image-slots {
             overflow-x: auto;
             padding: 2px;
             margin-bottom: 8px;
             border: 1px solid #ccc;
             background-color: #eee;
         }
-        .image-storage-preview {
+        .image-slots-preview {
             display: inline-block;
             position: relative;
             width: 96px;
@@ -104,12 +104,12 @@
             text-shadow: 0 0 2px white;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .image-storage-preview.drop-target {
+        .image-slots-preview.drop-target {
             transform: scale(1.05);
             box-shadow: 0 0 8px #0066ff80;
             border-color: #0066ff;
         }
-        .image-storage-preview img {
+        .image-slots-preview img {
             position: absolute;
             max-width: 100%;
             max-height: 100%;
@@ -117,7 +117,7 @@
             top: 50%;
             transform: translate(-50%, -50%);
         }
-        .image-storage-preview span {
+        .image-slots-preview span {
             position: relative;
             z-index: 5;
             background-color: #ffffff80;
@@ -269,7 +269,7 @@
             <button id="file-tree-toggle">☰</button>
         </div>
         <div class="content-container">
-            <div id="image-storage"></div>
+            <div id="image-slots"></div>
             <div id="preview-container">
                 <canvas id="source-canvas" class="checkerboard" width="1024" height="512"></canvas>
                 <canvas id="target-canvas" class="checkerboard" width="1024" height="512"></canvas>
