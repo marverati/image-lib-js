@@ -66,22 +66,36 @@ const examplesArray = [
     function resizing() {
         // Some random content
         gen((x, y) => [255 * x / 2048, 255 * y / 2048, ((x % 200) < 100) === ((y % 200) < 100) ? 255 : 0], 2048, 2048)
+        copyTo(0);
+
         // Scale to some absolute size
         resize(1920, 1080);
+        copyTo(1);
+
         // Scale relatively
         rescale(0.5);
+        copyTo(2);
+
         // Crop to to left corner
         crop(600, 300);
+        copyTo(3);
+        
         // Crop to right center
         crop(200, 200, 1, 0.5);
     },
     function filters() {
         // We start with some random generator to have something to work with
         gen((x, y) => [x & y, x | y, x ^ y], 512, 512);
+        copyTo(0);
+
         // Invert red
         filterR(v => 255-v);
+        copyTo(1);
+
         // Flip around green
         filterG(v => Math.abs(255 - 2 * v));
+        copyTo(2);
+
         // Adjust alpha
         filter(c => { c[3] = 255 - Math.max(c[0], c[1], c[2]) + Math.min(c[0], c[1], c[2]); return c })
     },

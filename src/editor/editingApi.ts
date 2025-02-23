@@ -1,8 +1,8 @@
-import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Colorizable, isConstructingPixelmap } from "../image-lib";
+import { RGBAPixelMap, ColorMap, Colorizable } from "../image-lib";
 import { ImageGenerator, ImageFilter, ImageChannelFilter, Color, PixelMap } from "../PixelMap";
 
 let currentTarget = -1; // -1 = Target img, 0 = source img, >0 = slots
-export let sourceCanvas, targetCanvas: HTMLCanvasElement;
+export let sourceCanvas: HTMLCanvasElement, targetCanvas: HTMLCanvasElement;
 
 export let generatorSize: { width: number, height: number} | null = null;
 
@@ -148,14 +148,6 @@ function renderToSlot(result: PixelMap<any> | HTMLImageElement | HTMLCanvasEleme
     storeInSlot(img, slot);
 }
 
-function renderToTarget(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement) {
-    renderToCanvas(result, targetCanvas);
-}
-
-function renderToSource(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement) {
-    renderToCanvas(result, sourceCanvas);
-}
-
 // --------------------
 // ---- Below: API ----
 // --------------------
@@ -282,8 +274,9 @@ function crop(
     relAnchorY = relAnchorX
 ) {
     const src = getCurrentCanvasOrImage();
-    const wDiff = src.width - width, hDiff = src.height - height;
-    const offX = -relAnchorX * wDiff, offY = -relAnchorY * hDiff;
+    const size = getCurrentSize();
+    const wDiff = size.width - width, hDiff = size.height - height;
+    const offX = relAnchorX * wDiff, offY = relAnchorY * hDiff;
     const cnv = document.createElement("canvas");
     cnv.width = width;
     cnv.height = height;
