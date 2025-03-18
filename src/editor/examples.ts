@@ -113,23 +113,27 @@ const r = param.toggle('red');
 const g = param.number('green', 0, 0, 255);
 const b = param.toggle('blue');
 const a = param.slider('alpha', 0, 255, 255);
-const text = param.text('text', 'Hello, World!');
+
+const seed = param.text('seed', '12345');
+const button = param.button('Randomize', () => {
+  param.get('seed').set(Math.floor(Math.random() * 100000).toString());
+})
+  
 const color = param.color('color', '#ff0000ff');
 const spot = param.select('spot', ["left", "middle", "right"], 1);
-console.log(spot);
-const mid = {
+const midFactor = {
   "left": 0.25,
   "middle": 0.5,
   "right": 0.75,
 }[spot];
+const midx = width * midFactor
 
 gen((x, y) => {
-  if (x >= width * mid - 20 && x <= width * mid + 20) {
+  if (x >= midx - 20 && x <= midx + 20) {
     return color;
   }
   return [r ? 255 : 0, g, b ? 255 : 0, a]
 });
-console.log('Text:', text);
     `,
 ]
 

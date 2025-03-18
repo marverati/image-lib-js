@@ -51,6 +51,10 @@ export class ParameterHandler {
         this.onRender?.();
     }
 
+    public get(id: string) {
+        return this.inputs[id];
+    }
+
     private renderParams() {
         this.div.innerHTML = '';
         let count = 0;
@@ -84,6 +88,17 @@ export class ParameterHandler {
         }
         this.inputs[id].lastTick = this.tick;
         return this.inputs[id].get() as boolean;
+    }
+
+    public button(id: string, callback: () => void): void {
+        this.totalCalls++;
+        this.debouncedSync();
+        if (!this.inputs[id]) {
+            this.inputs[id] = new ButtonInput(id, callback);
+        } else if (!(this.inputs[id] instanceof ButtonInput)) {
+            throw new Error('Parameter with ID ' + id + ' is already in use and of a different type');
+        }
+        this.inputs[id].lastTick = this.tick;
     }
 
     public slider(id: string, min: number, max: number, defaultValue?: number, step: number = 1): number {
@@ -170,6 +185,11 @@ export abstract class ParameterInput<T> {
 
     public get() {
         return this.value;
+    }
+
+    public set(value: T) {
+        this.value = value;
+        this.changeListener?.();
     }
 
     public render() {
