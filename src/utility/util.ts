@@ -72,3 +72,11 @@ export function mirrorOutsideRange(v: number, min: number, max: number): number 
         return 2 * max - value;
     }
 }
+
+export function debounce(func: (...args: any[]) => void, delay: number) {
+    let timeout: ReturnType<typeof setTimeout>;
+    return function(this: any, ...args: any[]) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}

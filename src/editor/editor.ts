@@ -9,6 +9,7 @@ import { QuotaWidget } from "../demo/QuotaWidget";
 import { clamp, getRangeMapper, mapRange } from "../utility/util";
 import { api, applyImage, generatorSize, initCanvases, initSlotUsage, sourceCanvas, targetCanvas, wrapImageInPixelMap } from "./editingApi";
 import { setupDocumentation } from "./documentation";
+import { ParameterHandler } from "./parameters";
 
 let editor: HTMLTextAreaElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
@@ -44,7 +45,22 @@ window.addEventListener('load', () => {
 
     setupDocumentation(document.querySelector(".help-overlay"));
 
+    const paramContent = document.querySelector("#parameter-content") as HTMLElement;
+    const paramEmpty = document.querySelector("#parameter-empty-state") as HTMLElement;
+    const parameterHandler = new ParameterHandler(
+        paramContent,
+        () => {
+            runCode();
+        },
+        () => {
+            const hasContent = paramContent.textContent.trim().length > 0;
+            paramContent.style.display = hasContent ? "block" : "none";
+            paramEmpty.style.display = hasContent ? "none" : "block";
+        },
+    );
+
     exposeToWindow(api);
+    exposeToWindow({param: parameterHandler});
 
     // For our code snippets to work as a function based on raw text, we need to add classes to window scope
     exposeToWindow({
