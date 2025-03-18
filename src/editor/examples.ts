@@ -106,12 +106,27 @@ const examplesArray = [
         use(1); // work on slot 1
         filter(c => [c[2], c[0], c[1], c[3]]); // flip channels
         use(); // work on target
-    }
+    },
+    `
+parameters:
+const r = param.toggle('red');
+const g = param.toggle('green');
+const b = param.toggle('blue');
+gen((x, y) => [r ? 255 : 0, g ? 255 : 0, b ? 255 : 0, 255]);
+    `,
 ]
 
 export const examples = {}
 for (const example of examplesArray) {
-    const key = example.name;
-    const code = processExample(key, example.toString());
-    examples[key] = code;
+    if (example instanceof Function) {
+        const key = example.name;
+        const code = processExample(key, example.toString());
+        examples[key] = code;
+    } else {
+        const fullText = example.trim();
+        const p = fullText.indexOf(':');
+        const key = fullText.slice(0, p).trim();
+        const code = fullText.slice(p + 1).trim();
+        examples[key] = code;
+    }
 }
