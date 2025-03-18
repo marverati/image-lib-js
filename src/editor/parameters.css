@@ -1,0 +1,22 @@
+
+
+#parameter-content > div {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    flex-wrap: wrap; /* Allow wrapping if needed */
+}
+
+#parameter-content .auto-update {
+    margin: 18px 0;
+}
+
+#parameter-content .run-button {
+    margin: 18px auto;
+}
+
+#parameter-content button {
+    min-width: 40%;
+    margin: auto;
+    display: block;
+}

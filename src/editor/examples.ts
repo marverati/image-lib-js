@@ -110,9 +110,26 @@ const examplesArray = [
     `
 parameters:
 const r = param.toggle('red');
-const g = param.toggle('green');
+const g = param.number('green', 0, 0, 255);
 const b = param.toggle('blue');
-gen((x, y) => [r ? 255 : 0, g ? 255 : 0, b ? 255 : 0, 255]);
+const a = param.slider('alpha', 0, 255, 255);
+const text = param.text('text', 'Hello, World!');
+const color = param.color('color', '#ff0000ff');
+const spot = param.select('spot', ["left", "middle", "right"], 1);
+console.log(spot);
+const mid = {
+  "left": 0.25,
+  "middle": 0.5,
+  "right": 0.75,
+}[spot];
+
+gen((x, y) => {
+  if (x >= width * mid - 20 && x <= width * mid + 20) {
+    return color;
+  }
+  return [r ? 255 : 0, g, b ? 255 : 0, a]
+});
+console.log('Text:', text);
     `,
 ]
 

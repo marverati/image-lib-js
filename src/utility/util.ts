@@ -29,6 +29,30 @@ export function averageColors(colors: (Color | ColorRGB)[]): Color {
     return result;
 }
 
+export function colorFromString(color: string): Color | ColorRGB {
+    if (color.startsWith('#')) {
+        const hex = parseInt(color.slice(1), 16);
+        if (color.length === 9) {
+            return [(hex >> 24) & 0xFF, (hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF];
+        } else {
+            return [(hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF, 255];
+        }
+    } else {
+        throw new Error('Unsupported color format');
+    }
+}
+
+export function colorToString(color: Color | ColorRGB | string): string {
+    if (typeof color === "string") {
+        return color;
+    }
+    if (color.length === 4) {
+        return `#${((color[0] << 24) + (color[1] << 16) + (color[2] << 8) + color[3]).toString(16).padStart(8, '0')}`;
+    } else {
+        return `#${((color[0] << 16) + (color[1] << 8) + color[2]).toString(16).padStart(6, '0')}`;
+    }
+}
+
 export function mapRange(v: number, fromMin: number, fromMax: number, toMin: number, toMax: number, clampResult = false): number {
     const result = toMin + (v - fromMin) / (fromMax - fromMin) * (toMax - toMin);
     if (clampResult) {
