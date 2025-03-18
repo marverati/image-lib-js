@@ -8,6 +8,7 @@ import { LoginWidget } from "../demo/LoginWidget";
 import { QuotaWidget } from "../demo/QuotaWidget";
 import { clamp, getRangeMapper, mapRange } from "../utility/util";
 import { api, applyImage, generatorSize, initCanvases, initSlotUsage, sourceCanvas, targetCanvas, wrapImageInPixelMap } from "./editingApi";
+import { setupDocumentation } from "./documentation";
 
 let editor: HTMLTextAreaElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
@@ -40,6 +41,8 @@ window.addEventListener('load', () => {
     targetContext = targetCanvas.getContext("2d");
 
     loginWidget = new LoginWidget(document.body, persistentStorage);
+
+    setupDocumentation(document.querySelector(".help-overlay"));
 
     exposeToWindow(api);
 

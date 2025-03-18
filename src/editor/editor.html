@@ -258,6 +258,52 @@
             padding: 24px;
             overflow-y: auto;
         }
+
+        .help-overlay {
+            display: block;
+            position: fixed;
+            width: 75%;
+            height: 85%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #00004080;
+            backdrop-filter: blur(4px);
+            border-radius: 8px;
+            border: 1px solid #000080;
+            color: white;
+            font-family: sans-serif;
+            font-size: 100%;
+            padding: 24px;
+            z-index: 99999;
+            line-height: 130%;
+            overflow: auto;
+        }
+
+        .help-overlay.hidden {
+            display: none;
+        }
+
+        .help-overlay code {
+            background-color: #00004080;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 4px;
+            border: 1px solid #ffffff80;
+            font-family: monospace;
+        }
+
+        .help-overlay .example:last-child {
+            margin-left: 32px;
+        }
+        .help-overlay .example:last-child::before {
+            content: "Example:   ";
+            padding-right: 5px;
+            font-family: sans-serif;
+            font-size: 70%;
+            opacity: 0.7;
+            margin-right: 4px;
+        }
     </style>
 </head>
 <body>
@@ -298,6 +344,8 @@
             </div>
             <div id="example-container"></div>
         </div>
+    </div>
+    <div class="help-overlay hidden">
     </div>
     <script>
         document.getElementById('file-tree-toggle').addEventListener('click', function() {
