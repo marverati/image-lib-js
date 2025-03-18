@@ -25,6 +25,9 @@ const INITIAL_USER_CODE = `applySourceToTarget();
 // Your code here`
 let imageSlots: HTMLImageElement[] = [];
 
+let parameterHandler: ParameterHandler;
+let parameterUpdateCalls = 0;
+
 const SNIPPET_NAMES_KEY = 'snippetNames';
 const SNIPPET_KEY_PREFIX = 'snippet___';
 
@@ -47,12 +50,13 @@ window.addEventListener('load', () => {
 
     const paramContent = document.querySelector("#parameter-content") as HTMLElement;
     const paramEmpty = document.querySelector("#parameter-empty-state") as HTMLElement;
-    const parameterHandler = new ParameterHandler(
+    parameterHandler = new ParameterHandler(
         paramContent,
         () => {
             runCode();
         },
         () => {
+            parameterUpdateCalls += 1;
             const hasContent = paramContent.textContent.trim().length > 0;
             paramContent.style.display = hasContent ? "block" : "none";
             paramEmpty.style.display = hasContent ? "none" : "block";
@@ -282,10 +286,15 @@ function runCode() {
     const code = editor.value;
     try {
         prepareWindowScope();
+        let prevParamUpdates = parameterHandler.getTotalCalls();
         const fnc = new Function(code);
         const result = fnc();
         if (result) {
             applyImage(targetCanvas, -1);
+        }
+        if (prevParamUpdates === parameterHandler.getTotalCalls()) {
+            // If no parameters were used, clear paramter div
+            parameterHandler.sync();
         }
     } catch(e) {
         displayError(e);
