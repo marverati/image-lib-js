@@ -1,9 +1,11 @@
 import { api } from "./editingApi";
+import { ParameterHandler } from "./parameters";
 
 const { use, copy, copyTo, crop, filter, filterG, filterR, gen, rescale, resize } = api;
 
 // Make compiler happy, even though examples will ultimately be executed in other scope and use global variables
 let width = 0, height = 0;
+let param: ParameterHandler;
 
 function processExample(key: string, example: string) {
     example = example.replaceAll('0, editor_1.', '');
@@ -27,11 +29,13 @@ const examplesArray = [
         gen((x, y) => (Math.floor(x / sz) % 2) === (Math.floor(y / sz) % 2) ? 255 : 0, 1024, 1024)
     },
     function spiral() {
+        const branches = param.number('branches', 3, 1, 20);
+        const disFactor = param.number('distance factor', 0.3, 0, 1, 0.001) ** 2;
         gen((x, y) => {
             const dx = x - width / 2, dy = y - height / 2;
             const angle = Math.atan2(dx, dy);
             const distance = Math.sqrt(dx * dx + dy * dy);
-            return 127.5 + 127.5 * Math.sin(3 * angle + 0.1 * distance);
+            return 127.5 + 127.5 * Math.sin(branches * angle + disFactor * distance);
         }, 1024, 1024)
     },
     function boxes() {
@@ -45,8 +49,9 @@ const examplesArray = [
         }, 1024, 1024)
     },
     function juliaFractal() {
-        const re = -0.4, im = 0.6;
-        const iterations = 128;
+        const re = param.slider('re', -1, 1, -0.4, 0.01);
+        const im = param.slider('im', -1, 1, 0.6, 0.01);
+        const iterations = param.number('iterations', 128, 1, 1000);
         gen((x0, y0) => {
             // Map pixel space to [-2, 2]x[-2, 2] space
             let x = -2 + 4 * x0 / width, y = -2 + 4 * y0 / width + 2 * (width - height) / width;
@@ -118,7 +123,7 @@ const seed = param.text('seed', '12345');
 const button = param.button('Randomize', () => {
   param.get('seed').set(Math.floor(Math.random() * 100000).toString());
 })
-  
+
 const color = param.color('color', '#ff0000ff');
 const spot = param.select('spot', ["left", "middle", "right"], 1);
 const midFactor = {

@@ -10,6 +10,7 @@ import { clamp, getRangeMapper, mapRange } from "../utility/util";
 import { api, applyImage, generatorSize, initCanvases, initSlotUsage, sourceCanvas, targetCanvas, wrapImageInPixelMap } from "./editingApi";
 import { setupDocumentation } from "./documentation";
 import { ParameterHandler } from "./parameters";
+import { readAndApplyShareUrlIfSet } from "./share";
 
 let editor: HTMLTextAreaElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
@@ -104,6 +105,13 @@ window.addEventListener('load', () => {
         }
     }, console.error);
     updateImageSlots();
+
+    // Load code from URL-provided deep link if set
+    readAndApplyShareUrlIfSet().then((code) => {
+        if (code) {
+            setEditorText(code);
+        }
+    }).catch(console.error);
 });
 
 function storeImageInSlot<T>(img: HTMLImageElement | PixelMap<T>, id?: number) {
