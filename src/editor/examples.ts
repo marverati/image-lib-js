@@ -36,7 +36,9 @@ const examplesArray = [
             const angle = Math.atan2(dx, dy);
             const distance = Math.sqrt(dx * dx + dy * dy);
             return 127.5 + 127.5 * Math.sin(branches * angle + disFactor * distance);
-        }, 1024, 1024)
+        }, 1024, 1024);
+        //> Generates a spiral
+        //> Use parameters on the right to adjust its look
     },
     function boxes() {
         const boxes = [];

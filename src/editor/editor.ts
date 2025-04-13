@@ -33,7 +33,7 @@ const SNIPPET_NAMES_KEY = 'snippetNames';
 const SNIPPET_KEY_PREFIX = 'snippet___';
 
 window.addEventListener('load', () => {
-    editor = document.getElementById("editor-text") as HTMLTextAreaElement;
+    editor = document.getElementById("editor-textarea") as HTMLTextAreaElement;
     initCanvases(
         document.getElementById("source-canvas") as HTMLCanvasElement,
         document.getElementById("target-canvas") as HTMLCanvasElement
@@ -63,6 +63,11 @@ window.addEventListener('load', () => {
             paramEmpty.style.display = hasContent ? "none" : "block";
         },
     );
+
+    const docuModeButton = document.querySelector("#editor-docu-toggle") as HTMLButtonElement;
+    docuModeButton.addEventListener("click", () => {
+        toggleDocuMode();
+    });
 
     exposeToWindow(api);
     exposeToWindow({param: parameterHandler});
@@ -110,6 +115,7 @@ window.addEventListener('load', () => {
     readAndApplyShareUrlIfSet().then((code) => {
         if (code) {
             setEditorText(code);
+            toggleDocuMode(true);
         }
     }).catch(console.error);
 });
@@ -291,8 +297,9 @@ function deleteSnippet(key: string) {
 }
 
 function runCode() {
-    const code = editor.value;
+    const code = editor.value ?? "";
     try {
+        applyDocuContentFromCode(code);
         prepareWindowScope();
         let prevParamUpdates = parameterHandler.getTotalCalls();
         const fnc = new Function(code);
@@ -307,6 +314,27 @@ function runCode() {
     } catch(e) {
         displayError(e);
     }
+}
+
+function applyDocuContentFromCode(code: string = editor.value) {
+    const lines = (code ?? "").split('\n').map(l => l.trim());
+    const docuLines = lines.filter(l => l.startsWith("//>"));
+    const docuContent = docuLines.map(l => l.substring(3).trim());
+    const docuContainer = document.querySelector("#editor-docu");
+    docuContainer.innerHTML = "";
+    console.log(code, lines, docuLines, docuContent);
+    if (docuContent.length === 0) {
+        docuContainer.classList.add("docu-empty-state");
+        docuContent.push("No documentation provided.");
+        docuContent.push("Add documentation using //> in your code.");
+    } else {
+        docuContainer.classList.remove("docu-empty-state");
+    }
+    docuContent.forEach(line => {
+        const p = document.createElement("p");
+        p.textContent = line;
+        docuContainer.appendChild(p);
+    });
 }
 
 function prepareWindowScope() {
@@ -387,5 +415,14 @@ function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageE
         div.classList.remove("drop-target");
         extraContainer?.remove();
         extraContainer = null;
+    }
+}
+
+function toggleDocuMode(docuMode = !document.body.classList.contains("docu-mode")) {
+    if (docuMode) {
+        applyDocuContentFromCode();
+        document.body.classList.add("docu-mode");
+    } else {
+        document.body.classList.remove("docu-mode");
     }
 }

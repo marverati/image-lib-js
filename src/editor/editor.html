@@ -3,6 +3,10 @@
     <title>ImageLibJS Primary Editor</title>
     <script src="./editor.ts"></script>
     <style>
+        body {
+            font-family: sans-serif;
+        }
+
         h1, h2 {
             font-family: sans-serif;
             text-align: center;
@@ -138,6 +142,51 @@
             flex-grow: 1;
             height: 400px;
             margin: 4px;
+            position: relative;
+        }
+
+        #editor-textarea {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 1;
+        }
+
+        #editor-docu {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 2;
+            background-color: #eeed;
+            text-align: center;
+            overflow-y: auto;
+            padding-top: 32px;
+            padding-bottom: 16px;
+            box-sizing: border-box;
+        }
+        .docu-mode #editor-docu {
+            display: block;
+        }
+        #editor-docu.docu-empty-state {
+            font-style: italic;
+        }
+
+        #editor-docu-toggle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            z-index: 3;
+            background-color: #fff;
+            border: 1px solid #aaa;
+            cursor: pointer;
+            padding: 2px 6px;
+            font-size: 80%;
+            font-family: sans-serif;
         }
 
         #parameter-container {
@@ -148,6 +197,11 @@
             overflow-y: auto;
             border: 1px solid #ccc;
             background-color: #eee;
+            transition: width 0.2s ease;
+        }
+
+        .docu-mode #parameter-container {
+            width: 45%;
         }
 
         #parameter-empty-state {
@@ -322,13 +376,20 @@
                 <canvas id="target-canvas" class="checkerboard" width="1024" height="512"></canvas>
             </div>
             <div id="editor-container">
-                <textarea
-                    id="editor-text"
-                    spellcheck="false"
-                    data-gramm="false"
-                    data-gramm_editor="false"
-                    data-enable-grammarly="false"
-                ></textarea>
+                <div id="editor-text">
+                    <textarea
+                        id="editor-textarea"
+                        spellcheck="false"
+                        data-gramm="false"
+                        data-gramm_editor="false"
+                        data-enable-grammarly="false"
+                    ></textarea>
+                    <div id="editor-docu"></div>
+                    <button
+                        id="editor-docu-toggle"
+                        title="Toggle between code and documentation view"
+                    >👁️</button>
+                </div>
                 <div id="parameter-container">
                     <div id="parameter-empty-state">
                         <P>
