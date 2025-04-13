@@ -6,9 +6,11 @@ const docHtml = `
 <div class="doc-section">
     <h3>Editor</h3>
     <ul>
-        <li><code>F1</code> to toggle documentation</li>
+        <li><code>F1</code> to toggle documentation (this overlay)</li>
         <li><i>Hold</i> <code>F1</code> to briefly show documentation</li>
         <li><code>CTRL+ENTER</code> to run code</li>
+        <li>Press <code>👁️</code> button to switch between code snippet and its documentation</li>
+        <li>Code documentation can be added by starting lines with <code>//></code></li>
     </ul>
 
     <h3>API</h3>
@@ -31,6 +33,18 @@ const docHtml = `
         -->
         <li><code>mirror()</code> to mirror the target horizontally</li>
         <li><code>flip()</code> to flip the target vertically</li>
+    </ul>
+
+    <h3>Parameters</h3>
+    <ul>
+        <li><code>param.toggle(name, defaultValue)</code> to create a toggle parameter <ex>const debug = param.toggle('debug', false)</ex></li>
+        <li><code>param.number(name, defaultValue, min, max, step)</code> to create a number parameter <ex>const g = param.number('green', 0, 0, 255)</ex></li>
+        <li><code>param.slider(name, defaultValue, min, max, step)</code> to create a slider parameter <ex>const b = param.slider('blue', 0, 0, 255)</ex></li>
+        <li><code>param.text(name, defaultValue, placeholder)</code> to create a text parameter <ex>const seed = param.text('seed', '12345')</ex></li>
+        <li><code>param.button(name, callback)</code> to create a button parameter <ex>const button = param.button('Randomize', () => { ... })</ex></li>
+        <li><code>param.color(name, defaultValue, returnAsString)</code> to create a color parameter. By default returns RGBA array. <ex>const color = param.color('color', '#ff0000ff')</ex></li>
+        <li><code>param.select(name, options, defaultIndex)</code> to create a dropdown <ex>const spot = param.select('spot', ["left", "middle", "right"], 1)</ex></li>
+        <li><code>param.get(name)</code> to get the parameter object and manipulate it <ex>param.get('seed').set('54321')</ex></li>
     </ul>
 </div>
 `.replaceAll(/<ex>(.*?)<\/ex>/g, (_, code) => `<code class="example">${code}</code>`);

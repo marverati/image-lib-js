@@ -127,11 +127,11 @@ export class ParameterHandler {
         return this.inputs[id].get() as number;
     }
 
-    public color(id: string, defaultValue: string = "#000000", includeAlpha: boolean = false): string {
+    public color(id: string, defaultValue: string = "#000000", returnAsString: boolean = false): string {
         this.totalCalls++;
         this.debouncedSync();
         if (!this.inputs[id]) {
-            this.inputs[id] = new ColorPickerInput(id, defaultValue, includeAlpha);
+            this.inputs[id] = new ColorPickerInput(id, defaultValue, returnAsString);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof ColorPickerInput)) {
             throw new Error('Parameter with ID ' + id + ' is already in use and of a different type');
