@@ -1,3 +1,4 @@
+import { capAtDecimals } from "../utility/util";
 import { Color, ColorRGB } from "../PixelMap";
 import { colorFromString, colorToString, debounce } from "../utility/util";
 
@@ -288,14 +289,21 @@ export class SliderInput extends ParameterInput<number> {
         valueDisplay.textContent = this.value.toString();
         valueDisplay.style.minWidth = '30px';
         valueDisplay.style.textAlign = 'right';
+        valueDisplay.style.fontSize = '70%';
+
+        const updateLabel = () => {
+            const label = capAtDecimals(this.value, 3);
+            valueDisplay.textContent = label;
+        }
         
         const updateValue = () => {
             this.value = Number(slider.value);
-            valueDisplay.textContent = this.value.toString();
+            updateLabel();
             this.changeListener?.();
         };
         
         slider.addEventListener('input', updateValue);
+        updateLabel();
         
         container.appendChild(slider);
         container.appendChild(valueDisplay);

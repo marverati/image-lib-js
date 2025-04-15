@@ -104,3 +104,12 @@ export function debounce(func: (...args: any[]) => void, delay: number) {
         timeout = setTimeout(() => func.apply(this, args), delay);
     };
 }
+
+export function capAtDecimals(v: number, decimals: number): string {
+    const currentDecimals = v.toString().split('.')[1]?.length || 0;
+    if (currentDecimals > decimals) {
+        return v.toFixed(decimals);
+    } else {
+        return v.toString();
+    }
+}

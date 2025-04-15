@@ -16,6 +16,7 @@ let editor: HTMLTextAreaElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
 let loginWidget: LoginWidget;
 let quotaWidget: QuotaWidget;
+let fileTreeToggleButton: HTMLButtonElement;
 
 let currentUserCodeName: string | null = null;
 let userCodes: Record<string, string> = {};
@@ -68,6 +69,12 @@ window.addEventListener('load', () => {
     docuModeButton.addEventListener("click", () => {
         toggleDocuMode();
     });
+
+    fileTreeToggleButton = document.getElementById('file-tree-toggle') as HTMLButtonElement;
+    fileTreeToggleButton.addEventListener('click', () => {
+        toggleFileTree();
+    });
+    toggleFileTree(false);
 
     exposeToWindow(api);
     exposeToWindow({param: parameterHandler});
@@ -424,5 +431,16 @@ function toggleDocuMode(docuMode = !document.body.classList.contains("docu-mode"
         document.body.classList.add("docu-mode");
     } else {
         document.body.classList.remove("docu-mode");
+    }
+}
+
+let fileTreeOpen = true;
+function toggleFileTree(enabled = !fileTreeOpen) {
+    fileTreeOpen = enabled;
+    const container = document.getElementById('file-tree-container');
+    if (enabled) {
+        container.classList.remove('collapsed');
+    } else {
+        container.classList.add('collapsed');
     }
 }
