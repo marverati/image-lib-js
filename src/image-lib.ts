@@ -262,11 +262,15 @@ export class RGBAPixelMap extends PixelMap<Color> {
     }
 
     public static fromImage(img: HTMLImageElement): RGBAPixelMap {
-        const cnv = ImageLib.createCanvasFromImage(img);
-        document.body.appendChild(cnv as HTMLCanvasElement);
-        const w = img.naturalWidth;
-        const data = (cnv.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, w, img.naturalHeight).data;
-        return new RGBAPixelMap(w, img.naturalHeight, (x: number, y: number) => {
+        return this.fromCanvas(ImageLib.createCanvasFromImage(img));
+    }
+
+    public static fromCanvas(cnv: HTMLCanvasElement | Canvas): RGBAPixelMap {
+        const ctx = cnv.getContext("2d") as CanvasRenderingContext2D;
+        const w = cnv.width;
+        const h = cnv.height;
+        const data = ctx.getImageData(0, 0, w, h).data;
+        return new RGBAPixelMap(w, h, (x: number, y: number) => {
             const p = 4 * (y * w + x);
             return [ data[p], data[p+1], data[p+2], data[p+3] ];
         });

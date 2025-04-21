@@ -11,8 +11,8 @@ export function initCanvases(source: HTMLCanvasElement, target: HTMLCanvasElemen
     targetCanvas = target;
 }
 
-let getFromSlot: (id: number) => HTMLImageElement;
-let storeInSlot: (img: HTMLImageElement, id) => void;
+let getFromSlot: (id: number) => HTMLImageElement | HTMLCanvasElement;
+let storeInSlot: (img: HTMLImageElement | HTMLCanvasElement, id) => void;
 export function initSlotUsage(slotGetter: typeof getFromSlot, slotSetter: typeof storeInSlot) {
     getFromSlot = slotGetter;
     storeInSlot = slotSetter;
@@ -31,8 +31,8 @@ function copyTo(toId: number = -1) {
 }
 
 function copy(): void;
-function copy(fromId: number, toId: number): void;
-function copy(fromId?: number, toId?: number) {
+function copy(fromId: number | HTMLImageElement | HTMLCanvasElement, toId: number): void;
+function copy(fromId?: number | HTMLImageElement | HTMLCanvasElement, toId?: number) {
     if (fromId == null && toId == null) {
         fromId = 0;
         toId = -1;
@@ -40,7 +40,7 @@ function copy(fromId?: number, toId?: number) {
     if (fromId === toId) {
         return;
     }
-    const img = getCurrentCanvasOrImage(fromId);
+    const img = typeof fromId === 'number' ? getCurrentCanvasOrImage(fromId) : fromId;
     applyImage(img, toId);
 }
 
@@ -75,9 +75,9 @@ export function getPixelMapForImage(img: HTMLCanvasElement | HTMLImageElement): 
         cnv.getContext("2d").drawImage(img, 0, 0);
     }
     const w = cnv.width;
-    const imgData = cnv.getContext("2d").getImageData(0, 0, w, sourceCanvas.height);
+    const imgData = cnv.getContext("2d").getImageData(0, 0, w, cnv.height);
     const data = imgData.data;
-    const map = new ColorMap(w, sourceCanvas.height, (x, y) => {
+    const map = new ColorMap(w, cnv.height, (x, y) => {
         const p = 4 * (x + y * w);
         return [ data[p], data[p + 1], data[p + 2], data[p + 3] ];
     });
@@ -101,6 +101,10 @@ function getCurrentCanvasOrImage(id = currentTarget) {
 
 export function wrapImageInPixelMap(img: HTMLImageElement) {
     return RGBAPixelMap.fromImage(img);
+}
+
+export function wrapCanvasInPixelMap(cnv: HTMLCanvasElement) {
+    return RGBAPixelMap.fromCanvas(cnv);
 }
 
 function getCurrentSize() {
@@ -137,7 +141,7 @@ function renderToCanvas(result: PixelMap<any> | HTMLImageElement | HTMLCanvasEle
 }
 
 function renderToSlot(result: PixelMap<any> | HTMLImageElement | HTMLCanvasElement, slot: number) {
-    if (result instanceof HTMLImageElement) {
+    if (!(result instanceof PixelMap)) {
         storeInSlot(result, slot);
         return;
     }
@@ -301,8 +305,19 @@ function flip() {
     filter((c, x, y) => map.get(x, map.height - 1 - y));
 }
 
+function createCanvas(width?: number, height?: number) {
+    const size = getCurrentSize();
+    const w = width ?? size.width;
+    const h = height ?? size.height;
+    const cnv = document.createElement("canvas");
+    cnv.width = w;
+    cnv.height = h;
+    return cnv;
+}
+
 export const api = {
     use,
+    get: getCurrentCanvasOrImage,
     copy,
     copyFrom,
     copyTo,
@@ -310,6 +325,7 @@ export const api = {
     gen,
     fill,
     filter,
+    filterInplace,
     filterR,
     filterG,
     filterB,
@@ -321,4 +337,5 @@ export const api = {
     combine3,
     mirror,
     flip,
+    createCanvas,
 }

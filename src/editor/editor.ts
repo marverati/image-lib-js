@@ -7,7 +7,7 @@ import { SmartStorage } from "../storage/SmartStorage";
 import { LoginWidget } from "../demo/LoginWidget";
 import { QuotaWidget } from "../demo/QuotaWidget";
 import { clamp, getRangeMapper, mapRange } from "../utility/util";
-import { api, applyImage, generatorSize, initCanvases, initSlotUsage, sourceCanvas, targetCanvas, wrapImageInPixelMap } from "./editingApi";
+import { api, applyImage, generatorSize, initCanvases, initSlotUsage, sourceCanvas, targetCanvas, wrapCanvasInPixelMap, wrapImageInPixelMap } from "./editingApi";
 import { setupDocumentation } from "./documentation";
 import { ParameterHandler } from "./parameters";
 import { readAndApplyShareUrlIfSet } from "./share";
@@ -25,7 +25,7 @@ const persistentStorage = new SmartStorage();
 const INITIAL_USER_CODE = `applySourceToTarget();
 
 // Your code here`
-let imageSlots: HTMLImageElement[] = [];
+let imageSlots: (HTMLImageElement | HTMLCanvasElement)[] = [];
 
 let parameterHandler: ParameterHandler;
 let parameterUpdateCalls = 0;
@@ -85,6 +85,7 @@ window.addEventListener('load', () => {
         targetCanvas,
         context: targetContext,
         targetContext,
+        canvas: targetCanvas,
         sourceContext,
         persistentStorage,
         saveCurrentSnippet,
@@ -127,9 +128,9 @@ window.addEventListener('load', () => {
     }).catch(console.error);
 });
 
-function storeImageInSlot<T>(img: HTMLImageElement | PixelMap<T>, id?: number) {
+function storeImageInSlot<T>(img: HTMLImageElement | HTMLCanvasElement | PixelMap<T>, id?: number) {
     const image = img instanceof PixelMap ? img.toImage() : img;
-    if (!image || !(image instanceof HTMLImageElement)) {
+    if (!image || !(image instanceof HTMLImageElement || image instanceof HTMLCanvasElement)) {
         console.error("Invalid image: ", img);
         return;
     }
@@ -141,16 +142,21 @@ function storeImageInSlot<T>(img: HTMLImageElement | PixelMap<T>, id?: number) {
     }
     imageSlots[id] = image;
     updateImageSlots();
+    return id;
 }
 
-function getImageFromSlot(index: number): HTMLImageElement | null {
-    return imageSlots[index - 1] ?? null;
+function getImageFromSlot(index: number): HTMLImageElement | HTMLCanvasElement | null {
+    return imageSlots[index] ?? null;
 }
 
 function getPixelMapFromSlot(index: number): RGBAPixelMap | null {
     const img = getImageFromSlot(index);
     if (img) {
-        return wrapImageInPixelMap(img);
+        if (img instanceof HTMLImageElement) {
+            return wrapImageInPixelMap(img);
+        } else {
+            return wrapCanvasInPixelMap(img);
+        }
     }
     return null
 }
@@ -162,7 +168,9 @@ function updateImageSlots() {
         const el = createElement("div", "image-slots-preview checkerboard", null, container);
         if (imageSlots[i]) {
             const img = createElement("img", "", "", el) as HTMLImageElement;
-            img.src = imageSlots[i].src;
+            const slotImg = imageSlots[i];
+            const src = slotImg instanceof HTMLImageElement ? slotImg.src : slotImg.toDataURL();
+            img.src = src;
         }
         createElement("span", "", `${i + 1}`, el);
         (el as any).storageIndex = i;
@@ -309,11 +317,16 @@ function runCode() {
         applyDocuContentFromCode(code);
         prepareWindowScope();
         let prevParamUpdates = parameterHandler.getTotalCalls();
+        sourceContext.save();
+        targetContext.save();
         const fnc = new Function(code);
+        api.use(); // Reset to state where we edit target canvas
         const result = fnc();
         if (result) {
             applyImage(targetCanvas, -1);
         }
+        sourceContext.restore();
+        targetContext.restore();
         if (prevParamUpdates === parameterHandler.getTotalCalls()) {
             // If no parameters were used, clear paramter div
             parameterHandler.sync();

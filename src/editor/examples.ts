@@ -1,11 +1,13 @@
 import { api } from "./editingApi";
 import { ParameterHandler } from "./parameters";
 
-const { use, copy, copyTo, crop, filter, filterG, filterR, gen, rescale, resize } = api;
+const { use, copy, copyTo, crop, filter, filterG, filterR, gen, rescale, resize, createCanvas } = api;
 
 // Make compiler happy, even though examples will ultimately be executed in other scope and use global variables
 let width = 0, height = 0;
 let param: ParameterHandler;
+let canvas: HTMLCanvasElement;
+let context: CanvasRenderingContext2D;
 
 function processExample(key: string, example: string) {
     example = example.replaceAll('0, editor_1.', '');
@@ -49,6 +51,39 @@ const examplesArray = [
             const count = boxes.filter(box => x >= box.x && y >= box.y && x < box.x + box.w && y < box.y + box.h).length;
             return [0, 255, 160, 80][count % 4];
         }, 1024, 1024)
+    },
+    function contextDrawing() {
+        resize(1024, 1024);
+        // You can affect the output canvas directly
+        context.fillStyle = 'red';
+        context.fillRect(0, 0, 1024, 1024);
+        context.fillStyle = 'blue';
+        context.fillRect(100, 100, 200, 200);
+        context.fillStyle = "black";
+        context.font = "48px Arial";
+        context.fillText("Hello world", 400, 400);
+
+        // Regular image-lib-js API is still working
+        copyTo(1);
+
+        // Or use copy(<canvas>, <id>) to copy from a canvas into a slot / source / target
+        copy(canvas, 2);
+
+        // You can create your own "offscreen" canvas:
+        const myCanvas = createCanvas(); // if no size is provided, last used size is reused
+        const myContext = myCanvas.getContext('2d');
+        myContext.rotate(Math.PI / 8);
+        myContext.shadowColor = 'gold';
+        myContext.shadowBlur = 20;
+        myContext.fillStyle = 'green';
+        myContext.fillRect(200, 100, 600, 350);
+        copy(myCanvas, 3); // copy to slot 3
+        use(3);
+        filter(c => [c[1], c[0], c[2], c[3]]); // flip channels
+
+        // Use fancy features such as blend modes
+        context.globalCompositeOperation = 'screen';
+        context.drawImage(myCanvas, 150, 0);
     },
     function juliaFractal() {
         const re = param.slider('re', -1, 1, -0.4, 0.01);
