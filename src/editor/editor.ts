@@ -314,6 +314,7 @@ function deleteSnippet(key: string) {
 function runCode() {
     const code = editor.value ?? "";
     try {
+        const t0 = Date.now();
         applyDocuContentFromCode(code);
         prepareWindowScope();
         let prevParamUpdates = parameterHandler.getTotalCalls();
@@ -331,9 +332,16 @@ function runCode() {
             // If no parameters were used, clear paramter div
             parameterHandler.sync();
         }
+        const duration = Date.now() - t0;
+        displayDuration(duration);
     } catch(e) {
         displayError(e);
     }
+}
+
+function displayDuration(duration: number): void {
+    console.log("Code execution took", duration, "ms");
+    // TODO: maybe display this to the user in DOM
 }
 
 function applyDocuContentFromCode(code: string = editor.value) {
@@ -342,7 +350,6 @@ function applyDocuContentFromCode(code: string = editor.value) {
     const docuContent = docuLines.map(l => l.substring(3).trim());
     const docuContainer = document.querySelector("#editor-docu");
     docuContainer.innerHTML = "";
-    console.log(code, lines, docuLines, docuContent);
     if (docuContent.length === 0) {
         docuContainer.classList.add("docu-empty-state");
         docuContent.push("No documentation provided.");

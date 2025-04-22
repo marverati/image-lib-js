@@ -102,11 +102,11 @@ export class ParameterHandler {
         this.inputs[id].lastTick = this.tick;
     }
 
-    public slider(id: string, min: number, max: number, defaultValue?: number, step: number = 1): number {
+    public slider(id: string, defaultValue: number, min: number, max: number, step: number = 1, liveUpdate = false): number {
         this.totalCalls++;
         this.debouncedSync();
         if (!this.inputs[id]) {
-            this.inputs[id] = new SliderInput(id, defaultValue ?? min, min, max, step);
+            this.inputs[id] = new SliderInput(id, defaultValue, min, max, step, liveUpdate);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof SliderInput)) {
             throw new Error('Parameter with ID ' + id + ' is already in use and of a different type');
@@ -263,12 +263,14 @@ export class SliderInput extends ParameterInput<number> {
     private min: number;
     private max: number;
     private step: number;
+    private liveUpdate: boolean;
     
-    public constructor(id: string, value: number, min: number, max: number, step: number = 1) {
+    public constructor(id: string, value: number, min: number, max: number, step: number = 1, liveUpdate = false) {
         super(id, value);
         this.min = min;
         this.max = max;
         this.step = step;
+        this.liveUpdate = liveUpdate;
     }
 
     public renderInteractive() {
@@ -299,10 +301,21 @@ export class SliderInput extends ParameterInput<number> {
         const updateValue = () => {
             this.value = Number(slider.value);
             updateLabel();
-            this.changeListener?.();
         };
         
-        slider.addEventListener('input', updateValue);
+        const invokeChangeListener = () => {
+            updateValue();
+            this.changeListener?.();
+        }
+        
+        if (this.liveUpdate) {
+            // Rerender while user is dragging the slider
+            slider.addEventListener('input', invokeChangeListener);
+        } else {
+            // Only rerender when slider is "dropped"
+            slider.addEventListener('input', updateValue);
+            slider.addEventListener('change', invokeChangeListener);
+        }
         updateLabel();
         
         container.appendChild(slider);

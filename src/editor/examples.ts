@@ -86,8 +86,8 @@ const examplesArray = [
         context.drawImage(myCanvas, 150, 0);
     },
     function juliaFractal() {
-        const re = param.slider('re', -1, 1, -0.4, 0.01);
-        const im = param.slider('im', -1, 1, 0.6, 0.01);
+        const re = param.slider('re', -0.4, -1, 1, 0.01);
+        const im = param.slider('im', 0.6, -1, 1, 0.01);
         const iterations = param.number('iterations', 128, 1, 1000);
         gen((x0, y0) => {
             // Map pixel space to [-2, 2]x[-2, 2] space
@@ -153,8 +153,8 @@ const examplesArray = [
 parameters:
 const r = param.toggle('red');
 const g = param.number('green', 0, 0, 255);
-const b = param.toggle('blue');
-const a = param.slider('alpha', 0, 255, 255);
+const b = param.slider('blue', 0, 0, 255, 1); // Usually, sliders only update at the end of a user interaction
+const a = param.slider('alpha', 255, 0, 255, 1, true); // setting liveUpdate to true, even dragging the slider will cause rerender of the image
 
 const seed = param.text('seed', '12345');
 const button = param.button('Randomize', () => {
@@ -174,7 +174,7 @@ gen((x, y) => {
   if (x >= midx - 20 && x <= midx + 20) {
     return color;
   }
-  return [r ? 255 : 0, g, b ? 255 : 0, a]
+  return [r ? 255 : 0, g, b, a]
 });
     `,
 ]

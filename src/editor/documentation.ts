@@ -39,7 +39,7 @@ const docHtml = `
     <ul>
         <li><code>param.toggle(name, defaultValue)</code> to create a toggle parameter <ex>const debug = param.toggle('debug', false)</ex></li>
         <li><code>param.number(name, defaultValue, min, max, step)</code> to create a number parameter <ex>const g = param.number('green', 0, 0, 255)</ex></li>
-        <li><code>param.slider(name, defaultValue, min, max, step)</code> to create a slider parameter <ex>const b = param.slider('blue', 0, 0, 255)</ex></li>
+        <li><code>param.slider(name, defaultValue, min, max, step, liveUpdate)</code> to create a slider parameter <ex>const b = param.slider('blue', 0, 0, 255)</ex></li>
         <li><code>param.text(name, defaultValue, placeholder)</code> to create a text parameter <ex>const seed = param.text('seed', '12345')</ex></li>
         <li><code>param.button(name, callback)</code> to create a button parameter <ex>const button = param.button('Randomize', () => { ... })</ex></li>
         <li><code>param.color(name, defaultValue, returnAsString)</code> to create a color parameter. By default returns RGBA array. <ex>const color = param.color('color', '#ff0000ff')</ex></li>
