@@ -7,11 +7,18 @@ import { colorFromString, colorToString, debounce } from "../utility/util";
 export class ParameterHandler {
     
     private inputs: Record<string, ParameterInput<any>> = {};
+    private inputSignatures: Record<string, string> = {};
     private debouncedSync = debounce(this.sync, 1);
     private tick = 0;
     private autoUpdateToggle = new ToggleInput('Auto Update', true);
     private runButton = new ButtonInput('Run', () => this.onChange?.());
     private totalCalls = 0;
+    private stopSyncs = false;
+
+
+    public get isLiveUpdate() {
+        return this.stopSyncs;
+    }
 
     public constructor(
         private readonly div: HTMLElement,
@@ -41,7 +48,18 @@ export class ParameterHandler {
         }
     }
 
+    public startSkippingSyncs() {
+        this.stopSyncs = true;
+    }
+
+    public stopSkippingSyncs() {
+        this.stopSyncs = false;
+    }
+
     public sync() {
+        if (this.stopSyncs) {
+            return;
+        }
         // Remove inputs that are no longer in use
         this.clearOutdatedInputs();
         // Finish this tick
@@ -94,7 +112,7 @@ export class ParameterHandler {
     public button(id: string, callback: () => void): void {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id]) {
+        if (!this.inputs[id] || this.checkAndStoreSignature(id, { callback: `${callback}` })) {
             this.inputs[id] = new ButtonInput(id, callback);
         } else if (!(this.inputs[id] instanceof ButtonInput)) {
             throw new Error('Parameter with ID ' + id + ' is already in use and of a different type');
@@ -105,8 +123,8 @@ export class ParameterHandler {
     public slider(id: string, defaultValue: number, min: number, max: number, step: number = 1, liveUpdate = false): number {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id]) {
-            this.inputs[id] = new SliderInput(id, defaultValue, min, max, step, liveUpdate);
+        if (!this.inputs[id] || this.checkAndStoreSignature(id, { min, max, step, liveUpdate })) {
+            this.inputs[id] = new SliderInput(this, id, defaultValue, min, max, step, liveUpdate);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof SliderInput)) {
             throw new Error('Parameter with ID ' + id + ' is already in use and of a different type');
@@ -118,7 +136,7 @@ export class ParameterHandler {
     public number(id: string, defaultValue: number, min?: number, max?: number, step?: number): number {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id]) {
+        if (!this.inputs[id] || this.checkAndStoreSignature(id, { min, max, step })) {
             this.inputs[id] = new NumberInput(id, defaultValue, min, max, step);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof NumberInput)) {
@@ -131,7 +149,7 @@ export class ParameterHandler {
     public color(id: string, defaultValue: string = "#000000", returnAsString: boolean = false): string {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id]) {
+        if (!this.inputs[id] || this.checkAndStoreSignature(id, { returnAsString })) {
             this.inputs[id] = new ColorPickerInput(id, defaultValue, returnAsString);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof ColorPickerInput)) {
@@ -144,7 +162,7 @@ export class ParameterHandler {
     public text(id: string, defaultValue: string = "", placeholder: string = ""): string {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id]) {
+        if (!this.inputs[id] || this.checkAndStoreSignature(id, { placeholder })) {
             this.inputs[id] = new TextInput(id, defaultValue, placeholder);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof TextInput)) {
@@ -157,7 +175,7 @@ export class ParameterHandler {
     public select(id: string, options: string[], defaultIndex: number = 0): string {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id]) {
+        if (!this.inputs[id] || this.checkAndStoreSignature(id, { options })) {
             this.inputs[id] = new SelectInput(id, options, defaultIndex);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof SelectInput)) {
@@ -165,6 +183,15 @@ export class ParameterHandler {
         }
         this.inputs[id].lastTick = this.tick;
         return this.inputs[id].get() as string;
+    }
+
+    private checkAndStoreSignature(id: string, signature: Object): boolean {
+        const signatureString = JSON.stringify(signature);
+        if (this.inputSignatures[id] === signatureString) {
+            return false;
+        }
+        this.inputSignatures[id] = signatureString;
+        return true;
     }
 }
 
@@ -265,12 +292,15 @@ export class SliderInput extends ParameterInput<number> {
     private step: number;
     private liveUpdate: boolean;
     
-    public constructor(id: string, value: number, min: number, max: number, step: number = 1, liveUpdate = false) {
+    public constructor(
+        private paramHandler: ParameterHandler,
+        id: string, value: number, min: number, max: number, step: number = 1, liveUpdate = false) {
         super(id, value);
         this.min = min;
         this.max = max;
         this.step = step;
         this.liveUpdate = liveUpdate;
+        console.log('Received step: ', step);
     }
 
     public renderInteractive() {
@@ -310,7 +340,16 @@ export class SliderInput extends ParameterInput<number> {
         
         if (this.liveUpdate) {
             // Rerender while user is dragging the slider
-            slider.addEventListener('input', invokeChangeListener);
+            slider.addEventListener('input', () => {
+                setTimeout(() => {
+                    this.paramHandler.startSkippingSyncs();
+                    invokeChangeListener();
+                });
+            });
+            slider.addEventListener('change', () => {
+                this.paramHandler.stopSkippingSyncs();
+                invokeChangeListener();
+            });
         } else {
             // Only rerender when slider is "dropped"
             slider.addEventListener('input', updateValue);

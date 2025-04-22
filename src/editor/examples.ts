@@ -86,16 +86,17 @@ const examplesArray = [
         context.drawImage(myCanvas, 150, 0);
     },
     function juliaFractal() {
-        const re = param.slider('re', -0.4, -1, 1, 0.01);
-        const im = param.slider('im', 0.6, -1, 1, 0.01);
-        const iterations = param.number('iterations', 128, 1, 1000);
+        const size = param.isLiveUpdate ? 400 : 1024; // <- we do this to ensure that while dragging parameters, we get quick updates, but when releasing slider, we get a higher resolution image
+        const re = param.slider('re', -0.4, -1, 1, 0.01, true);
+        const im = param.slider('im', 0.6, -1, 1, 0.01, true);
+        const iterations = param.number('Iterations (slow)', 256, 1, 1000);
         gen((x0, y0) => {
             // Map pixel space to [-2, 2]x[-2, 2] space
             let x = -2 + 4 * x0 / width, y = -2 + 4 * y0 / width + 2 * (width - height) / width;
             for (let i = 0; i < iterations; i++) {
                 // Return when iteration diverges far enough from origin
                 if (x * x + y * y > 4) {
-                    return 255 * i / iterations;
+                    return 255 * Math.sqrt(i / iterations);
                 }
                 // Compute next step
                 const newx = x * x - y * y + re;
@@ -103,7 +104,7 @@ const examplesArray = [
                 x = newx;
             }
             return 0;
-        }, 800, 800)
+        }, size, size)
     },
     function resizing() {
         // Some random content
