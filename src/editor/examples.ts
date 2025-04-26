@@ -1,7 +1,7 @@
 import { api } from "./editingApi";
 import { ParameterHandler } from "./parameters";
 
-const { use, copy, copyTo, crop, filter, filterG, filterR, gen, rescale, resize, createCanvas } = api;
+const { use, copy, copyTo, crop, filter, filterG, filterR, gen, rescale, resize, createCanvas, setFrameHandler } = api;
 
 // Make compiler happy, even though examples will ultimately be executed in other scope and use global variables
 let width = 0, height = 0;
@@ -106,6 +106,44 @@ const examplesArray = [
             return 0;
         }, size, size)
     },
+    function juliaInteractive() {
+        let size = 512; // <- we do this to ensure that while dragging parameters, we get quick updates, but when releasing slider, we get a higher resolution image
+        let re = -0.4;
+        let im = 0.6;
+        const iterations = 512;
+        setFrameHandler(({mouse}) => {
+            if (mouse.left !== 0) {
+                if (mouse.left > 0) {
+                    // Map mouse position to [-2, 2]x[-2, 2] space
+                    re = -2 + 4 * mouse.x / width;
+                    im = -2 + 4 * mouse.y / width + 2 * (width - height) / width;
+                    size = 400; // live update
+                } else {
+                    size = 1024; // release mouse -> higher resolution render
+                }
+                render();
+            }
+        })
+        function render() {
+            gen((x0, y0) => {
+                // Map pixel space to [-2, 2]x[-2, 2] space
+                let x = -2 + 4 * x0 / width, y = -2 + 4 * y0 / width + 2 * (width - height) / width;
+                for (let i = 0; i < iterations; i++) {
+                    // Return when iteration diverges far enough from origin
+                    if (x * x + y * y > 4) {
+                        return 255 * Math.sqrt(i / iterations);
+                    }
+                    // Compute next step
+                    const newx = x * x - y * y + re;
+                    y = 2 * x * y + im;
+                    x = newx;
+                }
+                return 0;
+            }, size, size);
+        }
+
+        //> Drag your mouse around on the canvas to change the fractal parameters
+    },
     function resizing() {
         // Some random content
         gen((x, y) => [255 * x / 2048, 255 * y / 2048, ((x % 200) < 100) === ((y % 200) < 100) ? 255 : 0], 2048, 2048)
@@ -149,6 +187,48 @@ const examplesArray = [
         use(1); // work on slot 1
         filter(c => [c[2], c[0], c[1], c[3]]); // flip channels
         use(); // work on target
+    },
+    function canvasAnimation() {
+        resize(1280, 720);
+        setFrameHandler(frameContext => {
+            const { fps, frame, time } = frameContext;
+            // Draw a moving circle
+            context.fillStyle = 'black';
+            context.fillRect(0, 0, width, height);
+            context.fillStyle = 'red';
+            context.beginPath();
+            const t = time * Math.PI;
+            const x = width * (0.5 + 0.3 * Math.sin(t));
+            const y = height * (0.5 - 0.3 * Math.cos(t));
+            context.arc(x, y, 50, 0, Math.PI * 2);
+            context.fill();
+
+            // Draw some text
+            context.fillStyle = 'white';
+            context.font = '36px Arial';
+            context.fillText(`FPS: ${fps}`, 10, 40);
+            context.fillText(`Frame: ${frame}`, 10, 80);
+            context.fillText(`Time: ${time.toFixed(2)}s`, 10, 120);
+        });
+    },
+    function canvasInteraction() {
+        resize(1280, 720);
+        setFrameHandler(frameContext => {
+            const { mouse, keysDown } = frameContext;
+            // Draw a circle at the mouse position
+            context.fillStyle = 'black';
+            context.fillRect(0, 0, width, height);
+            context.fillStyle = 'red';
+            context.beginPath();
+            context.arc(mouse.x, mouse.y, 50, 0, Math.PI * 2);
+            context.fill();
+
+            // Draw some text
+            context.fillStyle = 'white';
+            context.font = '36px Arial';
+            context.fillText(`Mouse: ${mouse.x.toFixed(0)}, ${mouse.y.toFixed(0)}`, 10, 40);
+            context.fillText(`Keys: ${Array.from(keysDown).join(', ')}`, 10, 80);
+        });
     },
     `
 parameters:

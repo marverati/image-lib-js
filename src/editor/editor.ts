@@ -1,5 +1,5 @@
-import { GrayscalePixelMap, RGBAPixelMap, ColorMap, Colorizable, isConstructingPixelmap } from "../image-lib";
-import { ImageGenerator, ImageFilter, ImageChannelFilter, Color, PixelMap } from "../PixelMap";
+import { GrayscalePixelMap, RGBAPixelMap, ColorMap, isConstructingPixelmap } from "../image-lib";
+import { PixelMap } from "../PixelMap";
 import { perlin2D, fractalPerlin2D } from "../utility/perlin";
 import { createElement, exposeToWindow, removeNonStandardCharacters } from "../demo/util";
 import { examples } from "./examples";
@@ -11,6 +11,7 @@ import { api, applyImage, generatorSize, initCanvases, initSlotUsage, sourceCanv
 import { setupDocumentation } from "./documentation";
 import { ParameterHandler } from "./parameters";
 import { readAndApplyShareUrlIfSet } from "./share";
+import { markScriptLoaded, markScriptStarted, setupInteraction } from "./interaction";
 
 let editor: HTMLTextAreaElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
@@ -49,6 +50,7 @@ window.addEventListener('load', () => {
     loginWidget = new LoginWidget(document.body, persistentStorage);
 
     setupDocumentation(document.querySelector(".help-overlay"));
+    setupInteraction(targetCanvas);
 
     const paramContent = document.querySelector("#parameter-content") as HTMLElement;
     const paramEmpty = document.querySelector("#parameter-empty-state") as HTMLElement;
@@ -199,6 +201,7 @@ async function addExamples() {
             const comment = `// ${name}`;
             const code = comment + '\n' + examples[name];
             setEditorText(code);
+            markScriptLoaded();
             currentUserCodeName = null;
         }
         container.appendChild(button);
@@ -317,6 +320,8 @@ function runCode() {
         const t0 = Date.now();
         applyDocuContentFromCode(code);
         prepareWindowScope();
+        markScriptStarted();
+        api.setFrameHandler(null); // By default, frameHandler is reset, and script must then reset it if it wants one
         let prevParamUpdates = parameterHandler.getTotalCalls();
         sourceContext.save();
         targetContext.save();

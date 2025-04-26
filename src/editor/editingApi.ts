@@ -1,10 +1,15 @@
 import { RGBAPixelMap, ColorMap, Colorizable } from "../image-lib";
 import { ImageGenerator, ImageFilter, ImageChannelFilter, Color, PixelMap } from "../PixelMap";
+import { FrameHandler, updateAndGetFrameContext } from "./interaction";
 
 let currentTarget = -1; // -1 = Target img, 0 = source img, >0 = slots
 export let sourceCanvas: HTMLCanvasElement, targetCanvas: HTMLCanvasElement;
 
 export let generatorSize: { width: number, height: number} | null = null;
+
+
+/** Callback scripts can define to render animations or react to mouse movement */
+let frameHandler: FrameHandler | null = null;
 
 export function initCanvases(source: HTMLCanvasElement, target: HTMLCanvasElement) {
     sourceCanvas = source;
@@ -315,6 +320,32 @@ function createCanvas(width?: number, height?: number) {
     return cnv;
 }
 
+let frameHandlerRunning = false;
+function setFrameHandler(handler: FrameHandler | null) {
+    if (handler !== frameHandler) {
+        frameHandler = handler;
+        if (!frameHandlerRunning) {
+            internalUpdateFrame();
+        }
+    }
+}
+
+function internalUpdateFrame() {
+    if (!frameHandler) {
+        frameHandlerRunning = false;
+        return;
+    }
+    const context = updateAndGetFrameContext(); // provides mouse state, keyboard state, time etc.
+    const result = frameHandler(context);
+    if (result === false) {
+        setFrameHandler(null);
+        frameHandlerRunning = false;
+        return;
+    }
+    frameHandlerRunning = true;
+    requestAnimationFrame(internalUpdateFrame);
+}
+
 export const api = {
     use,
     get: getCurrentCanvasOrImage,
@@ -338,4 +369,5 @@ export const api = {
     mirror,
     flip,
     createCanvas,
+    setFrameHandler,
 }
