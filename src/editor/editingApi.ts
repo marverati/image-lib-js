@@ -349,6 +349,7 @@ function internalUpdateFrame() {
 export const api = {
     use,
     get: getCurrentCanvasOrImage,
+    getPixelMap: getCurrentPixelMap,
     copy,
     copyFrom,
     copyTo,

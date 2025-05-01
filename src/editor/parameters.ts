@@ -146,7 +146,7 @@ export class ParameterHandler {
         return this.inputs[id].get() as number;
     }
 
-    public color(id: string, defaultValue: string = "#000000", returnAsString: boolean = false): string {
+    public color(id: string, defaultValue: string = "#000000", returnAsString: boolean = false): string | Color | ColorRGB {
         this.totalCalls++;
         this.debouncedSync();
         if (!this.inputs[id] || this.checkAndStoreSignature(id, { returnAsString })) {
@@ -156,7 +156,7 @@ export class ParameterHandler {
             throw new Error('Parameter with ID ' + id + ' is already in use and of a different type');
         }
         this.inputs[id].lastTick = this.tick;
-        return this.inputs[id].get() as string;
+        return this.inputs[id].get() as string | Color | ColorRGB;
     }
 
     public text(id: string, defaultValue: string = "", placeholder: string = ""): string {
@@ -294,13 +294,13 @@ export class SliderInput extends ParameterInput<number> {
     
     public constructor(
         private paramHandler: ParameterHandler,
-        id: string, value: number, min: number, max: number, step: number = 1, liveUpdate = false) {
+        id: string, value: number, min: number, max: number, step: number = 1, liveUpdate = false
+    ) {
         super(id, value);
         this.min = min;
         this.max = max;
         this.step = step;
         this.liveUpdate = liveUpdate;
-        console.log('Received step: ', step);
     }
 
     public renderInteractive() {

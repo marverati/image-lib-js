@@ -79,7 +79,7 @@ export function setupInteraction(canvas: HTMLCanvasElement) {
         currentContext.mouse.y = newY;
         currentContext.mouse.inside = newX >= 0 && newX < canvas.width && newY >= 0 && newY < canvas.height;
     });
-    window.addEventListener('mousedown', (e) => {
+    canvas.addEventListener('mousedown', (e) => {
         if (e.button === 0) {
             currentContext.mouse.left = updateKeyState(currentContext.mouse.left, true);
             e.preventDefault();
