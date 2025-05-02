@@ -47,9 +47,14 @@ export function colorToString(color: Color | ColorRGB | string): string {
         return color;
     }
     if (color.length === 4) {
-        return `#${((color[0] << 24) + (color[1] << 16) + (color[2] << 8) + color[3]).toString(16).padStart(8, '0')}`;
+        // Use >>> 0 to treat the result of the shift as an unsigned 32-bit integer
+        const red = (color[0] << 24) >>> 0; // avoid weird negative numbers
+        const gba = (color[1] << 16) | (color[2] << 8) | color[3];
+        // Combine alpha and RGB, ensuring the result is treated as unsigned
+        const combined = (red + gba) >>> 0;
+        return `#${combined.toString(16).padStart(8, '0')}`;
     } else {
-        return `#${((color[0] << 16) + (color[1] << 8) + color[2]).toString(16).padStart(6, '0')}`;
+        return `#${((color[0] << 16) | (color[1] << 8) | color[2]).toString(16).padStart(6, '0')}`;
     }
 }
 

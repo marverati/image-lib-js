@@ -58,7 +58,6 @@ export class ColorPicker {
         if (!this.enabled) return;
 
         const canvas = event.target as HTMLCanvasElement;
-        console.log('ColorPicker click detected on', canvas, event.target);
         // Check if the click is actually on the canvas content, not just the element bounds
         if (!canvas.offsetParent) return; // Ignore clicks if canvas is not visible/rendered
         if (!canvas.getContext) return; // Ignore clicks on non-canvas elements
