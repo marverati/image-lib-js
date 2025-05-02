@@ -12,6 +12,7 @@ import { setupDocumentation } from "./documentation";
 import { ParameterHandler } from "./parameters";
 import { readAndApplyShareUrlIfSet } from "./share";
 import { markScriptLoaded, markScriptStarted, setupInteraction } from "./interaction";
+import { ColorPicker } from "./ColorPicker";
 
 let editor: HTMLTextAreaElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
@@ -65,6 +66,7 @@ window.addEventListener('load', () => {
             paramContent.style.display = hasContent ? "block" : "none";
             paramEmpty.style.display = hasContent ? "none" : "block";
         },
+        new ColorPicker(),
     );
 
     const docuModeButton = document.querySelector("#editor-docu-toggle") as HTMLButtonElement;

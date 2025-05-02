@@ -1,6 +1,7 @@
 import { capAtDecimals } from "../utility/util";
 import { Color, ColorRGB } from "../PixelMap";
 import { colorFromString, colorToString, debounce } from "../utility/util";
+import { ColorPicker } from "./ColorPicker";
 
 
 
@@ -24,6 +25,7 @@ export class ParameterHandler {
         private readonly div: HTMLElement,
         private readonly onChange?: () => void,
         private readonly onRender?: () => void,
+        public readonly colorPicker?: ColorPicker,
     ) {
         if (!this.div) {
             throw new Error('No div provided for ParameterHandler');
@@ -112,7 +114,7 @@ export class ParameterHandler {
     public button(id: string, callback: () => void): void {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id] || this.checkAndStoreSignature(id, { callback: `${callback}` })) {
+        if (this.checkAndStoreSignature(id, { callback: `${callback}` })) {
             this.inputs[id] = new ButtonInput(id, callback);
         } else if (!(this.inputs[id] instanceof ButtonInput)) {
             throw new Error('Parameter with ID ' + id + ' is already in use and of a different type');
@@ -123,7 +125,7 @@ export class ParameterHandler {
     public slider(id: string, defaultValue: number, min: number, max: number, step: number = 1, liveUpdate = false): number {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id] || this.checkAndStoreSignature(id, { min, max, step, liveUpdate })) {
+        if (this.checkAndStoreSignature(id, { min, max, step, liveUpdate })) {
             this.inputs[id] = new SliderInput(this, id, defaultValue, min, max, step, liveUpdate);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof SliderInput)) {
@@ -136,7 +138,7 @@ export class ParameterHandler {
     public number(id: string, defaultValue: number, min?: number, max?: number, step?: number): number {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id] || this.checkAndStoreSignature(id, { min, max, step })) {
+        if (this.checkAndStoreSignature(id, { min, max, step })) {
             this.inputs[id] = new NumberInput(id, defaultValue, min, max, step);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof NumberInput)) {
@@ -149,8 +151,8 @@ export class ParameterHandler {
     public color(id: string, defaultValue: string = "#000000", returnAsString: boolean = false): string | Color | ColorRGB {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id] || this.checkAndStoreSignature(id, { returnAsString })) {
-            this.inputs[id] = new ColorPickerInput(id, defaultValue, returnAsString);
+        if (this.checkAndStoreSignature(id, { returnAsString })) {
+            this.inputs[id] = new ColorPickerInput(this, id, defaultValue, returnAsString);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof ColorPickerInput)) {
             throw new Error('Parameter with ID ' + id + ' is already in use and of a different type');
@@ -162,7 +164,7 @@ export class ParameterHandler {
     public text(id: string, defaultValue: string = "", placeholder: string = ""): string {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id] || this.checkAndStoreSignature(id, { placeholder })) {
+        if (this.checkAndStoreSignature(id, { placeholder })) {
             this.inputs[id] = new TextInput(id, defaultValue, placeholder);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof TextInput)) {
@@ -175,7 +177,7 @@ export class ParameterHandler {
     public select(id: string, options: string[], defaultIndex: number = 0): string {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id] || this.checkAndStoreSignature(id, { options })) {
+        if (this.checkAndStoreSignature(id, { options })) {
             this.inputs[id] = new SelectInput(id, options, defaultIndex);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof SelectInput)) {
@@ -397,6 +399,7 @@ export class ColorPickerInput extends ParameterInput<string | Color | ColorRGB> 
     private includeAlpha: boolean;
     
     public constructor(
+        private paramHandler: ParameterHandler,
         id: string,
         value: string | Color | ColorRGB = "#000000",
         private readonly returnAsString = false,
@@ -434,7 +437,7 @@ export class ColorPickerInput extends ParameterInput<string | Color | ColorRGB> 
         let alphaInput: HTMLInputElement | null = null;
         
         if (this.includeAlpha) {
-            const alpha = parseInt((this.value as string).substring(7), 16) || 255;
+            const alpha = parseInt((this.value as string).substring(7), 16) ?? 255;
             const alphaPercent = Math.round((alpha / 255) * 100);
             
             alphaInput = document.createElement('input');
@@ -446,7 +449,7 @@ export class ColorPickerInput extends ParameterInput<string | Color | ColorRGB> 
             
             const alphaLabel = document.createElement('span');
             alphaLabel.textContent = `${alphaPercent}%`;
-            alphaLabel.style.fontSize = '0.8em';
+            alphaLabel.style.fontSize = '70%';
             alphaLabel.style.minWidth = '40px';
             
             alphaInput.addEventListener('change', () => {
@@ -459,6 +462,32 @@ export class ColorPickerInput extends ParameterInput<string | Color | ColorRGB> 
             container.appendChild(alphaInput);
             container.appendChild(alphaLabel);
         }
+
+        // Picker
+        const pickerButton = document.createElement('button');
+        pickerButton.textContent = '⌖';
+        pickerButton.onclick = () => {
+            this.paramHandler.colorPicker.toggle((color: Color, colorString: string) => {
+                if (this.includeAlpha) {
+                    // With alpha
+                    const colorAsHex = colorToString(color);
+                    colorPicker.value = colorAsHex;
+                    // read alpha from string
+                    const alpha = color[3] ?? 255;
+                    const alphaPercent = Math.round((alpha / 255) * 100);
+                    alphaInput.value = alphaPercent.toString();
+                    this.value = colorAsHex;
+                } else {
+                    // No alpha
+                    const colorAsHex = colorToString(color).substring(0, 7);
+                    colorPicker.value = colorAsHex;
+                    this.value = colorAsHex;
+                }
+                this.changeListener?.();
+            });
+        }
+        pickerButton.style.width = '24px';
+        pickerButton.style.minWidth = 'auto';
         
         colorPicker.addEventListener('change', () => {
             if (this.includeAlpha && alphaInput) {
@@ -471,6 +500,7 @@ export class ColorPickerInput extends ParameterInput<string | Color | ColorRGB> 
         });
         
         container.insertBefore(colorPicker, container.firstChild);
+        container.insertBefore(pickerButton, colorPicker);
         return container;
     }
 }
