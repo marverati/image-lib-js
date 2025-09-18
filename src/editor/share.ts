@@ -1,5 +1,3 @@
-
-
 /**
  * Checks if a share URL is set in the URL parameters and if so,
  * fetches the script and returns the code.
@@ -19,7 +17,7 @@ export function readAndApplyShareUrlIfSet() {
     return Promise.resolve(null);
 }
 
-function getShareUrl(name: string) {
+export function getShareUrl(name: string) {
     return `https://rationaltools.org/tools/image-editor/data/share/${name}.js`;
 }
 

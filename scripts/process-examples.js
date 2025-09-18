@@ -12,6 +12,8 @@ const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'src', 'editor');
 const INPUT = path.join(SRC, 'examples_raw.js');
 const OUTPUT = path.join(SRC, 'examples_raw.json');
+const SHARE_INTERNAL = path.join(SRC, 'share_internal');
+const PUBLIC_OUTPUT = path.join(SRC, 'public_examples.json');
 
 function stripImports(src) {
   return src.replace(/^\s*import\s+[^\n]*\n/gm, '');
@@ -32,6 +34,20 @@ function processExample(key, example) {
     }
   }
   return text;
+}
+
+function listPublicExamples() {
+  try {
+    const entries = fs.readdirSync(SHARE_INTERNAL, { withFileTypes: true });
+    const names = entries
+      .filter(e => e.isFile() && e.name.endsWith('.js'))
+      .map(e => e.name.replace(/\.js$/i, ''))
+      .sort((a, b) => a.localeCompare(b));
+    fs.writeFileSync(PUBLIC_OUTPUT, JSON.stringify(names, null, 2));
+    console.log(`process-examples: wrote ${names.length} public examples to ${path.relative(ROOT, PUBLIC_OUTPUT)}`);
+  } catch (e) {
+    console.warn('process-examples: could not list public examples', e && e.message || e);
+  }
 }
 
 function build() {
@@ -102,6 +118,9 @@ function build() {
 
   fs.writeFileSync(OUTPUT, JSON.stringify(out, null, 2));
   console.log(`process-examples: wrote ${Object.keys(out).length} examples to ${path.relative(ROOT, OUTPUT)}`);
+
+  // Also write public examples list
+  listPublicExamples();
 }
 
 if (require.main === module) {

@@ -10,9 +10,18 @@ import { clamp, getRangeMapper, mapRange } from "../utility/util";
 import { api, applyImage, generatorSize, initCanvases, initSlotUsage, sourceCanvas, targetCanvas, wrapCanvasInPixelMap, wrapImageInPixelMap } from "./editingApi";
 import { setupDocumentation } from "./documentation";
 import { ParameterHandler } from "./parameters";
-import { readAndApplyShareUrlIfSet } from "./share";
+import { readAndApplyShareUrlIfSet, getShareUrl } from "./share";
 import { markScriptLoaded, markScriptStarted, setupInteraction } from "./interaction";
 import { ColorPicker } from "./ColorPicker";
+import publicExamples from "./public_examples.json";
+
+/*
+    Developer Notes
+    - This file defines the primary editor UI and the file tree with three sections: User, Public, Examples.
+    - User snippets are persisted via SmartStorage. We keep a Set snippetNames synchronized with storage.
+    - Read-only sources (Public/Examples) display a bottom-centered "Make a Copy" button that creates a User copy.
+    - Autosave is debounced while editing User snippets. A dirty marker (*) is shown next to the active title.
+*/
 
 let editor: HTMLTextAreaElement;
 let sourceContext, targetContext: CanvasRenderingContext2D;
@@ -21,12 +30,14 @@ let quotaWidget: QuotaWidget;
 let fileTreeToggleButton: HTMLButtonElement;
 
 let currentUserCodeName: string | null = null;
+let currentScriptOrigin: 'user' | 'examples' | 'public' = 'user';
+let isDirty = false;
 let userCodes: Record<string, string> = {};
 const persistentStorage = new SmartStorage();
 
 const INITIAL_USER_CODE = `copy();
 
-// Your code here`
+// Your code here`;
 let imageSlots: (HTMLImageElement | HTMLCanvasElement)[] = [];
 
 let parameterHandler: ParameterHandler;
@@ -34,8 +45,10 @@ let parameterUpdateCalls = 0;
 
 const SNIPPET_NAMES_KEY = 'snippetNames';
 const SNIPPET_KEY_PREFIX = 'snippet___';
+// Track known snippet names from storage; do not lose existing entries on save
+let snippetNames = new Set<string>();
 
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     editor = document.getElementById("editor-textarea") as HTMLTextAreaElement;
     initCanvases(
         document.getElementById("source-canvas") as HTMLCanvasElement,
@@ -83,7 +96,6 @@ window.addEventListener('load', () => {
     exposeToWindow(api);
     exposeToWindow({param: parameterHandler});
 
-    // For our code snippets to work as a function based on raw text, we need to add classes to window scope
     exposeToWindow({
         sourceCanvas,
         targetCanvas,
@@ -104,26 +116,22 @@ window.addEventListener('load', () => {
         clamp,
         mapRange,
         getRangeMapper,
-    })
+    });
 
-    addExamples();
-    quotaWidget = new QuotaWidget(document.querySelector("#example-container"), persistentStorage);
+    await buildFileTree();
+    quotaWidget = new QuotaWidget(document.querySelector("#file-tree"), persistentStorage);
     prepareTextarea();
 
-    // Allow dropping images to load
     turnIntoImageDropTarget(document.body, (img, _fieldId, target) => {
         if (target instanceof HTMLElement && ((target as any).storageIndex >= 0 || (target.parentElement as any).storageIndex >= 0)) {
-            // Load to storage
             const index = (target as any).storageIndex ?? (target.parentElement as any).storageIndex;
             storeImageInSlot(img, +index);
         } else {
-            // As main picture
             applyImage(img, 0);
         }
     }, console.error);
     updateImageSlots();
 
-    // Load code from URL-provided deep link if set
     readAndApplyShareUrlIfSet().then((code) => {
         if (code) {
             setEditorText(code);
@@ -131,6 +139,229 @@ window.addEventListener('load', () => {
         }
     }).catch(console.error);
 });
+
+function markDirty(dirty: boolean) {
+    isDirty = dirty;
+    updateTreeDirtyMarker();
+}
+
+function updateTreeDirtyMarker() {
+    if (currentScriptOrigin !== 'user' && currentUserCodeName) return;
+    const el = document.querySelector(`[data-user-script="${cssEscape(currentUserCodeName || '')}"] .title`);
+    if (el) {
+        el.textContent = currentUserCodeName + (isDirty ? ' *' : '');
+    }
+}
+
+function cssEscape(s: string) { return s.replace(/"/g, '\\"'); }
+
+function prepareTextarea() {
+    editor.addEventListener('input', () => {
+        if (currentScriptOrigin === 'user') {
+            markDirty(true);
+            clearTimeout((prepareTextarea as any)._t);
+            (prepareTextarea as any)._t = setTimeout(() => {
+                saveCurrentSnippet();
+                markDirty(false);
+            }, 800);
+        }
+    });
+    editor.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            runCode();
+        }
+    });
+}
+
+async function buildFileTree() {
+    const root = document.getElementById('file-tree');
+    root.innerHTML = '';
+
+    const userSection = createSection(root, 'User', true);
+    const publicSection = createSection(root, 'Public', true);
+    const examplesSection = createSection(root, 'Examples', true);
+
+    const snippetTitlesStr = await persistentStorage.getValue(SNIPPET_NAMES_KEY);
+    let titles: string[] = [];
+    if (snippetTitlesStr) {
+        try { titles = JSON.parse(snippetTitlesStr); } catch {}
+    }
+    titles.sort((a,b) => a.localeCompare(b));
+    snippetNames = new Set(titles);
+    for (const name of titles) {
+        addUserItem(userSection.body, name);
+    }
+
+    for (const name of publicExamples as string[]) {
+        addPublicItem(publicSection.body, name);
+    }
+
+    for (const name of Object.keys(examples).sort((a,b)=>a.localeCompare(b))) {
+        addExampleItem(examplesSection.body, name);
+    }
+
+    const newBtn = document.createElement('button');
+    newBtn.textContent = '+ New Snippet';
+    newBtn.className = 'example new-snippet';
+    newBtn.onclick = async (e) => {
+        e.stopPropagation(); // do not toggle the section
+        // Ensure the User section stays open
+        userSection.body.style.display = 'block';
+        userSection.toggle.textContent = '▾';
+        const name = createNewSnippet();
+        if (name) {
+            addUserItem(userSection.body, name);
+            await selectUserScript(name);
+        }
+    };
+    userSection.header.appendChild(newBtn);
+}
+
+function createSection(parent: HTMLElement, title: string, open = true) {
+    const container = document.createElement('div');
+    const header = document.createElement('div');
+    header.className = 'tree-section-header';
+    const toggle = document.createElement('span');
+    toggle.className = 'arrow';
+    toggle.textContent = open ? '▾' : '▸';
+    const label = document.createElement('span');
+    label.textContent = title;
+    header.appendChild(toggle); header.appendChild(label);
+    const body = document.createElement('div');
+    body.style.display = open ? 'block' : 'none';
+    header.onclick = () => {
+        const isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : 'block';
+        toggle.textContent = isOpen ? '▸' : '▾';
+    };
+    container.appendChild(header); container.appendChild(body);
+    parent.appendChild(container);
+    return {container, header, body, toggle};
+}
+
+function addUserItem(parent: HTMLElement, name: string) {
+    const row = document.createElement('div');
+    row.className = 'tree-item';
+    row.dataset.userScript = name;
+    const title = document.createElement('span');
+    title.className = 'title';
+    title.textContent = name;
+    const del = document.createElement('button');
+    del.className = 'trash';
+    del.title = 'Delete';
+    del.textContent = '🗑️';
+    del.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm(`Delete snippet "${name}"?`)) {
+            deleteSnippet(name);
+            row.remove();
+        }
+    };
+    row.onclick = async () => await selectUserScript(name);
+    row.appendChild(title); row.appendChild(del);
+    parent.appendChild(row);
+}
+
+function addPublicItem(parent: HTMLElement, name: string) {
+    const row = document.createElement('div');
+    row.className = 'tree-item';
+    row.onclick = async () => {
+        currentScriptOrigin = 'public';
+        currentUserCodeName = null;
+        const url = getShareUrl(name);
+        const res = await fetch(url);
+        const code = await res.text();
+        setEditorReadOnly(true, name, code);
+    };
+    row.textContent = name;
+    parent.appendChild(row);
+}
+
+function addExampleItem(parent: HTMLElement, name: string) {
+    const row = document.createElement('div');
+    row.className = 'tree-item';
+    row.onclick = () => {
+        currentScriptOrigin = 'examples';
+        currentUserCodeName = null;
+        const code = examples[name];
+        setEditorReadOnly(true, name, code);
+    };
+    row.textContent = name;
+    parent.appendChild(row);
+}
+
+function setEditorReadOnly(readOnly: boolean, title: string, code: string) {
+    setEditorText(code);
+    editor.readOnly = readOnly;
+    const existing = document.getElementById('make-copy-btn');
+    if (existing) existing.remove();
+    if (readOnly) {
+        const btn = document.createElement('button');
+        btn.id = 'make-copy-btn';
+        btn.textContent = 'Make a Copy';
+        btn.style.position = 'absolute';
+        btn.style.left = '50%';
+        btn.style.transform = 'translateX(-50%)';
+        btn.style.bottom = '8px';
+        btn.style.zIndex = '4';
+        btn.onclick = () => {
+            const newName = createUniqueUserName(title);
+            userCodes[newName] = code;
+            snippetNames.add(newName);
+            saveSnippetNames();
+            saveSnippet(newName);
+            selectUserScript(newName);
+        };
+        (document.getElementById('editor-text') as HTMLElement).appendChild(btn);
+    }
+}
+
+function createUniqueUserName(base: string) {
+    let name = base;
+    let i = 1;
+    while (userCodes[name] || snippetNames.has(name)) name = `${base}-${i++}`;
+    return name;
+}
+
+async function selectUserScript(name: string) {
+    currentScriptOrigin = 'user';
+    currentUserCodeName = name;
+    const stored = await persistentStorage.getValue(SNIPPET_KEY_PREFIX + name);
+    const code = userCodes[name] || stored || INITIAL_USER_CODE;
+    setEditorText(code);
+    editor.readOnly = false;
+    const copyBtn = document.getElementById('make-copy-btn');
+    if (copyBtn) copyBtn.remove();
+    markDirty(false);
+}
+
+function saveSnippetNames() {
+    const names = new Set<string>(snippetNames);
+    for (const k of Object.keys(userCodes)) names.add(k);
+    persistentStorage.setValue(SNIPPET_NAMES_KEY, JSON.stringify(Array.from(names).sort((a,b)=>a.localeCompare(b))));
+}
+
+function saveSnippet(key: string) {
+    if (userCodes[key]) {
+        persistentStorage.setValue(SNIPPET_KEY_PREFIX + key, userCodes[key]);
+    }
+}
+
+function saveCurrentSnippet() {
+    if (currentUserCodeName) {
+        userCodes[currentUserCodeName] = editor.value;
+        snippetNames.add(currentUserCodeName);
+        saveSnippet(currentUserCodeName);
+        saveSnippetNames();
+    }
+}
+
+function deleteSnippet(key: string) {
+    delete userCodes[key];
+    snippetNames.delete(key);
+    persistentStorage.deleteValue(SNIPPET_KEY_PREFIX + key);
+    saveSnippetNames();
+}
 
 function storeImageInSlot<T>(img: HTMLImageElement | HTMLCanvasElement | PixelMap<T>, id?: number) {
     const image = img instanceof PixelMap ? img.toImage() : img;
@@ -168,7 +399,7 @@ function getPixelMapFromSlot(index: number): RGBAPixelMap | null {
 function updateImageSlots() {
     const container = document.getElementById("image-slots");
     container.innerHTML = "";
-    for (let i = 0; i <= imageSlots.length; i++) { // go one index further, to always show one empty option for user to drop image into
+    for (let i = 0; i <= imageSlots.length; i++) {
         const el = createElement("div", "image-slots-preview checkerboard", null, container);
         if (imageSlots[i]) {
             const img = createElement("img", "", "", el) as HTMLImageElement;
@@ -179,85 +410,6 @@ function updateImageSlots() {
         createElement("span", "", `${i + 1}`, el);
         (el as any).storageIndex = i;
         turnIntoImageDropTarget(el, () => {}, console.error);
-    }
-}
-
-
-function prepareTextarea() {
-    editor.addEventListener('keydown', (e: KeyboardEvent) => {
-        // CTRL+Enter to execute code
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            runCode();
-        }
-    });
-}
-
-async function addExamples() {
-    const container = document.getElementById('example-container');
-    for (const name of Object.keys(examples)) {
-        const button = document.createElement('button');
-        button.className = 'example';
-        button.textContent = name;
-        button.onclick = () => {
-            saveCurrentSnippet();
-            const comment = `// ${name}`;
-            const code = comment + '\n' + examples[name];
-            setEditorText(code);
-            markScriptLoaded();
-            currentUserCodeName = null;
-        }
-        container.appendChild(button);
-    }
-    // New Snippet button
-    container.appendChild(document.createElement('BR'));
-    const btn = document.createElement('button');
-    btn.className = 'example new-snippet';
-    btn.textContent = "New Snippet";
-    btn.onclick = () => {
-        saveCurrentSnippet();
-        // Check quota and avoid creating new snippet if quota is reached
-        if (quotaWidget.getVisibleQuota() >= 1) {
-            alert("You have reached your storage quota. Please delete some of your snippets before creating new ones.");
-            return;
-        }
-        const name = createNewSnippet();
-        if (name) {
-            const button = document.createElement('button');
-            button.className = 'example snippet';
-            button.textContent = name;
-            button.onclick = () => {
-                saveCurrentSnippet();
-                currentUserCodeName = name;
-                setEditorText(userCodes[name] ?? '');
-            }
-            container.appendChild(button);
-        }
-    };
-    container.appendChild(btn);
-    container.appendChild(document.createElement('BR'));
-    // User snippets
-    const snippetTitles = await persistentStorage.getValue(SNIPPET_NAMES_KEY);
-    if (snippetTitles) {
-        try {
-            const codeNames = JSON.parse(snippetTitles);
-            userCodes = {}
-            for (const name of codeNames) {
-                // TODO: load individual snippets lazily rather than all at once
-                const code = await persistentStorage.getValue(SNIPPET_KEY_PREFIX + name);
-                userCodes[name] = code;
-                const button = document.createElement('button');
-                button.className = 'example snippet';
-                button.textContent = name;
-                button.onclick = () => {
-                    saveCurrentSnippet();
-                    currentUserCodeName = name;
-                    setEditorText(userCodes[name] ?? '');
-                }
-                container.appendChild(button);
-            }
-        } catch(e) {
-            console.error(e);
-        }
     }
 }
 
@@ -272,7 +424,7 @@ function getEditorText() {
 
 function createNewSnippet(): string | null {
     const name = removeNonStandardCharacters(prompt("Name of new code snippet. May include letters, numbers and the following special characters: -_,:+") ?? '');
-    if (!name || name in userCodes) {
+    if (!name || name in userCodes || snippetNames.has(name)) {
         if (name) {
             alert("Name '" + name + "' already taken! Please try again with a different name.");
         }
@@ -280,40 +432,11 @@ function createNewSnippet(): string | null {
     } else {
         currentUserCodeName = name;
         userCodes[name] = "// *** " + name + " ***\n" + INITIAL_USER_CODE;
+        snippetNames.add(name);
         setEditorText(userCodes[name]);
         saveSnippetNames();
         return name;
     }
-}
-
-function saveSnippetNames() {
-    persistentStorage.setValue(SNIPPET_NAMES_KEY, JSON.stringify(Object.keys(userCodes)));
-}
-
-function saveCurrentSnippet() {
-    if (currentUserCodeName) {
-        userCodes[currentUserCodeName] = getEditorText();
-        saveSnippet(currentUserCodeName);
-    }
-}
-
-function saveAllSnippets() {
-    persistentStorage.setValue(SNIPPET_NAMES_KEY, JSON.stringify(Object.keys(userCodes)));
-    for (const key in userCodes) {
-        persistentStorage.setValue(SNIPPET_KEY_PREFIX + key, userCodes[key]);
-    }
-    quotaWidget.render();
-}
-
-function saveSnippet(key: string) {
-    if (userCodes[key]) {
-        persistentStorage.setValue(SNIPPET_KEY_PREFIX + key, userCodes[key]);
-    }
-}
-
-function deleteSnippet(key: string) {
-    delete userCodes[key];
-    persistentStorage.deleteValue(SNIPPET_KEY_PREFIX + key);
 }
 
 function runCode() {
@@ -323,12 +446,12 @@ function runCode() {
         applyDocuContentFromCode(code);
         prepareWindowScope();
         markScriptStarted();
-        api.setFrameHandler(null); // By default, frameHandler is reset, and script must then reset it if it wants one
+        api.setFrameHandler(null);
         let prevParamUpdates = parameterHandler.getTotalCalls();
         sourceContext.save();
         targetContext.save();
         const fnc = new Function(code);
-        api.use(); // Reset to state where we edit target canvas
+        api.use();
         const result = fnc();
         if (result) {
             applyImage(targetCanvas, -1);
@@ -336,7 +459,6 @@ function runCode() {
         sourceContext.restore();
         targetContext.restore();
         if (prevParamUpdates === parameterHandler.getTotalCalls()) {
-            // If no parameters were used, clear paramter div
             parameterHandler.sync();
         }
         const duration = Date.now() - t0;
@@ -348,7 +470,6 @@ function runCode() {
 
 function displayDuration(duration: number): void {
     console.log("Code execution took", duration, "ms");
-    // TODO: maybe display this to the user in DOM
 }
 
 function applyDocuContentFromCode(code: string = editor.value) {
@@ -400,12 +521,9 @@ function displayError(e: any) {
 
 function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageElement, fieldId: number, target: EventTarget) => void, handleError = (e: ErrorEvent) => {}, extraFields: string[] = []) {
     let extraContainer: HTMLElement | null = null;
-    // Set up event listeners for the drag and drop events
     div.addEventListener("dragover", (event) => {
         event.preventDefault();
-        // Visualize
         div.classList.add("drop-target");
-        // Extra fields
         if (extraFields.length > 0 && !extraContainer) {
             extraContainer = createElement(
                 "div",
@@ -418,21 +536,17 @@ function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageE
   
     div.addEventListener("dragleave", (event) => {
         if (event.target === div) {
-            // End visualization
             clearDropOverlay();
         }
     });
   
     div.addEventListener("drop", (event) => {
         event.preventDefault();
-        // Check if the file is an image
-        const file = event.dataTransfer.files[0];
-        if (file.type.startsWith("image/")) {
-            // Handle the dropped image file
+        const file = (event as DragEvent).dataTransfer.files[0];
+        if (file && file.type.startsWith("image/")) {
             const img = new Image();
             const reader = new FileReader();
             const fieldId = extraContainer ? Array.from(extraContainer.children).indexOf(event.target as HTMLElement) : -1;
-            // Set up an event listener for the "load" event on the FileReader
             reader.addEventListener("load", () => {
                 img.addEventListener("load", () => handleImage(img, fieldId, event.target));
                 img.addEventListener("error", (error: ErrorEvent) => handleError(error));
@@ -440,8 +554,6 @@ function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageE
             });
             reader.readAsDataURL(file);
         }
-    
-        // End visualization
         clearDropOverlay();
     });
 
@@ -471,3 +583,5 @@ function toggleFileTree(enabled = !fileTreeOpen) {
         container.classList.add('collapsed');
     }
 }
+
+async function addExamples() { /* no-op: replaced by buildFileTree */ }
