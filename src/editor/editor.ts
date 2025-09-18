@@ -24,7 +24,7 @@ let currentUserCodeName: string | null = null;
 let userCodes: Record<string, string> = {};
 const persistentStorage = new SmartStorage();
 
-const INITIAL_USER_CODE = `applySourceToTarget();
+const INITIAL_USER_CODE = `copy();
 
 // Your code here`
 let imageSlots: (HTMLImageElement | HTMLCanvasElement)[] = [];

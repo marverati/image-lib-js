@@ -4,3 +4,4 @@ dist
 output/*
 src/server
 src/backend
+src/examples/projects/local
