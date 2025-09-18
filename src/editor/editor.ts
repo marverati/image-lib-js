@@ -28,6 +28,8 @@ let sourceContext, targetContext: CanvasRenderingContext2D;
 let loginWidget: LoginWidget;
 let quotaWidget: QuotaWidget;
 let fileTreeToggleButton: HTMLButtonElement;
+// Track the currently selected row in the file tree for visual highlighting
+let selectedRow: HTMLElement | null = null;
 
 let currentUserCodeName: string | null = null;
 let currentScriptOrigin: 'user' | 'examples' | 'public' = 'user';
@@ -119,7 +121,8 @@ window.addEventListener('load', async () => {
     });
 
     await buildFileTree();
-    quotaWidget = new QuotaWidget(document.querySelector("#file-tree"), persistentStorage);
+    // Attach QuotaWidget to a fixed footer inside the side panel
+    quotaWidget = new QuotaWidget(document.querySelector('#file-tree-footer'), persistentStorage);
     prepareTextarea();
 
     turnIntoImageDropTarget(document.body, (img, _fieldId, target) => {
@@ -174,7 +177,7 @@ function prepareTextarea() {
 }
 
 async function buildFileTree() {
-    const root = document.getElementById('file-tree');
+    const root = document.getElementById('file-tree-list');
     root.innerHTML = '';
 
     const userSection = createSection(root, 'User', true);
@@ -201,8 +204,9 @@ async function buildFileTree() {
     }
 
     const newBtn = document.createElement('button');
-    newBtn.textContent = '+ New Snippet';
-    newBtn.className = 'example new-snippet';
+    newBtn.title = 'New Snippet';
+    newBtn.textContent = '+';
+    newBtn.className = 'add-btn';
     newBtn.onclick = async (e) => {
         e.stopPropagation(); // do not toggle the section
         // Ensure the User section stays open
@@ -239,6 +243,12 @@ function createSection(parent: HTMLElement, title: string, open = true) {
     return {container, header, body, toggle};
 }
 
+function setSelectedRow(row: HTMLElement) {
+    if (selectedRow && selectedRow !== row) selectedRow.classList.remove('selected');
+    selectedRow = row;
+    row.classList.add('selected');
+}
+
 function addUserItem(parent: HTMLElement, name: string) {
     const row = document.createElement('div');
     row.className = 'tree-item';
@@ -255,9 +265,10 @@ function addUserItem(parent: HTMLElement, name: string) {
         if (confirm(`Delete snippet "${name}"?`)) {
             deleteSnippet(name);
             row.remove();
+            if (selectedRow === row) selectedRow = null;
         }
     };
-    row.onclick = async () => await selectUserScript(name);
+    row.onclick = async () => { setSelectedRow(row); await selectUserScript(name); };
     row.appendChild(title); row.appendChild(del);
     parent.appendChild(row);
 }
@@ -266,6 +277,7 @@ function addPublicItem(parent: HTMLElement, name: string) {
     const row = document.createElement('div');
     row.className = 'tree-item';
     row.onclick = async () => {
+        setSelectedRow(row);
         currentScriptOrigin = 'public';
         currentUserCodeName = null;
         const url = getShareUrl(name);
@@ -281,6 +293,7 @@ function addExampleItem(parent: HTMLElement, name: string) {
     const row = document.createElement('div');
     row.className = 'tree-item';
     row.onclick = () => {
+        setSelectedRow(row);
         currentScriptOrigin = 'examples';
         currentUserCodeName = null;
         const code = examples[name];
@@ -332,6 +345,9 @@ async function selectUserScript(name: string) {
     editor.readOnly = false;
     const copyBtn = document.getElementById('make-copy-btn');
     if (copyBtn) copyBtn.remove();
+    // Highlight the corresponding row when selection is triggered programmatically
+    const row = document.querySelector(`[data-user-script="${cssEscape(name)}"]`) as HTMLElement | null;
+    if (row) setSelectedRow(row);
     markDirty(false);
 }
 
