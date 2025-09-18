@@ -11,6 +11,8 @@ export function readAndApplyShareUrlIfSet() {
     if (scriptName) {
         const safeName = cleanUpName(scriptName);
         const fetchUrl = getShareUrl(safeName);
+        const readableName = makeNameReadable(safeName);
+        document.title = `Image Editor - ${readableName}`;
         return fetch(fetchUrl)
             .then(response => response.text());
     }
@@ -23,4 +25,11 @@ function getShareUrl(name: string) {
 
 function cleanUpName(name: string) {
     return name.replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+function makeNameReadable(name: string) {
+    name = name.replace(/[_-]/g, ' ');
+    // Turn all word beginnings uppercase
+    name = name.replace(/\b\w/g, c => c.toUpperCase());
+    return name;
 }
