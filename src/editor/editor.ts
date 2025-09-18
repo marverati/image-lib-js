@@ -33,6 +33,13 @@ let selectedRow: HTMLElement | null = null;
 
 let currentUserCodeName: string | null = null;
 let currentScriptOrigin: 'user' | 'examples' | 'public' = 'user';
+// Title helper
+function setEditorTitle(origin: 'user'|'public'|'examples', name: string) {
+    const readable = name.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const originReadable = origin === 'user' ? 'User script' : (origin === 'public' ? 'Public script' : 'Example');
+    document.title = `Image Editor - ${originReadable} - ${readable}`;
+}
+
 let isDirty = false;
 let userCodes: Record<string, string> = {};
 const persistentStorage = new SmartStorage();
@@ -125,20 +132,30 @@ window.addEventListener('load', async () => {
     quotaWidget = new QuotaWidget(document.querySelector('#file-tree-footer'), persistentStorage);
     prepareTextarea();
 
-    turnIntoImageDropTarget(document.body, (img, _fieldId, target) => {
-        if (target instanceof HTMLElement && ((target as any).storageIndex >= 0 || (target.parentElement as any).storageIndex >= 0)) {
-            const index = (target as any).storageIndex ?? (target.parentElement as any).storageIndex;
-            storeImageInSlot(img, +index);
-        } else {
-            applyImage(img, 0);
-        }
-    }, console.error);
-    updateImageSlots();
-
-    readAndApplyShareUrlIfSet().then((code) => {
-        if (code) {
-            setEditorText(code);
-            toggleDocuMode(true);
+    // If URL has ?load=NAME, try to select the corresponding Public script
+    readAndApplyShareUrlIfSet().then(async (name) => {
+        if (name) {
+            const rows = Array.from(document.querySelectorAll('#file-tree-list .tree-item')) as HTMLElement[];
+            const publicRow = rows.find(r => r.parentElement?.previousSibling &&
+                (r.parentElement.previousSibling as HTMLElement).textContent?.includes('Public') && r.textContent?.trim() === name);
+            if (publicRow) {
+                publicRow.click();
+                toggleDocuMode(true);
+                return;
+            }
+            // Fallback: fetch and show read-only if not found in the list
+            try {
+                currentScriptOrigin = 'public';
+                currentUserCodeName = null;
+                const url = getShareUrl(name);
+                const res = await fetch(url);
+                const code = await res.text();
+                setEditorReadOnly(true, name, code);
+                setEditorTitle('public', name);
+                toggleDocuMode(true);
+            } catch (e) {
+                console.warn('Failed to auto-load shared script', name, e);
+            }
         }
     }).catch(console.error);
 });
@@ -284,6 +301,7 @@ function addPublicItem(parent: HTMLElement, name: string) {
         const res = await fetch(url);
         const code = await res.text();
         setEditorReadOnly(true, name, code);
+        setEditorTitle('public', name);
     };
     row.textContent = name;
     parent.appendChild(row);
@@ -298,6 +316,7 @@ function addExampleItem(parent: HTMLElement, name: string) {
         currentUserCodeName = null;
         const code = examples[name];
         setEditorReadOnly(true, name, code);
+        setEditorTitle('examples', name);
     };
     row.textContent = name;
     parent.appendChild(row);
@@ -348,6 +367,7 @@ async function selectUserScript(name: string) {
     // Highlight the corresponding row when selection is triggered programmatically
     const row = document.querySelector(`[data-user-script="${cssEscape(name)}"]`) as HTMLElement | null;
     if (row) setSelectedRow(row);
+    setEditorTitle('user', name);
     markDirty(false);
 }
 
