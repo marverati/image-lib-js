@@ -7,10 +7,13 @@
     "start": "npm run dev",
     "dev": "parcel src/index.html",
     "build": "parcel build src/index.html",
-    "build:editor": "parcel build src/demo/editor.html",
+    "build:editor": "npm run process-examples && parcel build src/editor/editor.html --out-dir dist/editor --public-url ./",
     "demo": "parcel src/demo/demo.html",
-    "editor": "parcel src/demo/editor.html",
-    "test": "jest"
+    "editor": "parcel src/editor/editor.html",
+    "test": "jest",
+    "dist": "npm run build:editor",
+    "process-examples": "node scripts/process-examples.js",
+    "dev:editor": "npm run process-examples && parcel src/editor/editor.html"
   },
   "author": "marverati",
   "license": "ISC",
