@@ -7,7 +7,7 @@
     "start": "npm run dev",
     "dev": "parcel src/index.html",
     "build": "parcel build src/index.html",
-    "build:editor": "npm run process-examples && parcel build src/editor/editor.html --out-dir dist/editor --public-url ./",
+    "build:editor": "npm run process-examples && parcel build src/editor/editor.html --out-dir dist/editor --public-url ./ --no-minify && node scripts/fix-editor-public-urls.js",
     "demo": "parcel src/demo/demo.html",
     "editor": "parcel src/editor/editor.html",
     "test": "jest",
