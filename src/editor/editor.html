@@ -476,6 +476,8 @@
         }
         .current-script-title.hidden { display: none; }
     </style>
+    <!-- Use a .txt to avoid Parcel's markdown transformer pulling in ESM 'marked' -->
+    <link id="prompt-template-link" rel="preload" as="fetch" href="./prompt-template.txt">
     <link rel="stylesheet" href="./parameters.css" />
 </head>
 <body>

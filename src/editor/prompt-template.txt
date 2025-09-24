@@ -1,0 +1,168 @@
+# Image Editor Prompt Template
+
+You are writing a JavaScript code snippet to run inside the ImageLibJS browser editor. The environment exposes a set of globals (the "editing API") and UI conventions described below. Output only code unless otherwise asked. Prefer concise, readable code with inline documentation lines starting with `//>` as described.
+
+Key concepts
+- Two canvases: Source (left, id 0) and Target (right, id -1). Target is the default output unless changed.
+- Slots: A row of numbered thumbnails for storing additional images. Script IDs:
+  - -1 = Target canvas (right)
+  - 0 = Source canvas (left)
+  - 1..n = Slots in the strip at the top (1-based in the UI, but refer to them by ID as numbers 1..n in the API)
+- Parameters panel: Define interactive controls (toggles, sliders, inputs) using `param.*`. Reading a param creates the UI control and returns its value.
+- Documentation view: Lines starting with `//>` are extracted and displayed as documentation. Include succinct notes about parameters, algorithm, inputs/outputs.
+
+Editing API (globals)
+- use(id) => void
+  - Sets the default target for subsequent operations. id ∈ {-1, 0, 1..}
+  - Examples: use(-1) for Target, use(0) for Source, use(1) to render to Slot 1.
+- get(id = currentTarget) => HTMLCanvasElement | HTMLImageElement
+  - Returns the current image/canvas for an ID.
+- getPixelMap(id = currentTarget) => RGBAPixelMap
+  - Returns a PixelMap view for the given image ID.
+- copy(): void
+  - With no args, copies Source (0) to Target (-1).
+- copy(fromId, toId): void
+  - Copies image from `fromId` to `toId`.
+- copyFrom(fromId): void
+  - Copies from `fromId` to current target.
+- copyTo(toId): void
+  - Copies current target to `toId`.
+- generate(gen, width?, height?) => RGBAPixelMap
+  - Also aliased as gen and fill (fill when `gen` is a constant color).
+  - `gen` can be:
+    - A function (x, y) => [r,g,b,a]
+    - A Colorizable object exposing .get(x,y)
+  - If width/height omitted, uses current target size. If only width provided, height = width.
+- filter(fn, map = getPixelMap()) => RGBAPixelMap
+  - Applies a buffered filter function (c,x,y) => newColor to the current image.
+- filterInplace(fn, map = getPixelMap()) => RGBAPixelMap
+  - In-place variant. Mutates the map directly.
+- filterR/G/B/A(fn, map = getPixelMap())
+  - Per-channel filters. fn receives (channelValue, fullColor, x, y) and returns new channel value.
+- resize(width, height = width)
+  - Resizes the current image to exact dimensions.
+- rescale(fx, fy = fx)
+  - Scales the current image by factors.
+- crop(width, height = width, relAnchorX = 0, relAnchorY = relAnchorX)
+  - Crops around a relative anchor (0..1). 0.5,0.5 is centered crop.
+- combine(img1, img2, mapping, stretchRelative = false) => RGBAPixelMap
+  - Combine two PixelMaps with a mapping returning a Color. Use wrap helpers if you have images/canvases.
+- combine3(img1, img2, img3, mapping, stretchRelative = false) => RGBAPixelMap
+  - Combine three PixelMaps similarly.
+- mirror() / flip()
+  - Mirrors horizontally / flips vertically the current image.
+- createCanvas(width?, height?) => HTMLCanvasElement
+  - Creates a new canvas (defaulting to current size if omitted).
+- setFrameHandler(handler | null)
+  - Registers an animation or interactive frame callback that receives time/mouse/keyboard context and returns false to stop.
+
+Helpers available via window
+- width / height (getters/setters)
+  - Get current generator or target dimensions. Set to change target size.
+- perlin2D(x,y,seed?), fractalPerlin2D(x,y,octaves?,persistence?,seed?)
+- clamp(x, min, max), mapRange(x, inMin, inMax, outMin, outMax), getRangeMapper(...)
+- Color/PixelMap classes: RGBAPixelMap, ColorMap; wrappers: wrapImageInPixelMap(img), wrapCanvasInPixelMap(canvas).
+
+Slots, Source, and Target
+- Use copy(), copyFrom(), copyTo() to move data between Source (0), Target (-1), and Slots (1..n).
+- Store intermediate results in slots to blend or reference later.
+- The top thumbnails show slots; you can also drop images into them.
+
+Parameters API (param.*)
+- toggle(name, defaultValue = false) => boolean
+- number(name, defaultValue = 0, min?, max?, step?) => number
+- slider(name, defaultValue = 0, min?, max?, step?, liveUpdate?) => number
+- text(name, defaultValue = '', placeholder?) => string
+- button(name, callback) => void
+- color(name, defaultColor = '#ffffffff' | [r,g,b,a], returnAsString = false) => string | [r,g,b,a]
+- select(name, options: string[], defaultIndex = 0) => string
+- get(name) => parameter object (e.g., to .set() values)
+
+Conventions
+- Start your snippet with copy(); to initialize Target from Source.
+- Use //> lines to provide documentation that appears in the Doc view.
+- Use setFrameHandler for animations or mouse interactions, and call setFrameHandler(null) to stop.
+
+Examples
+1) Invert colors with adjustable strength
+//> Invert colors with adjustable strength
+//> Use the slider to set inversion amount.
+copy();
+const amount = param.slider('Amount', 1, 0, 1, 0.01, true);
+filter((c) => {
+  const inv = [255 - c[0], 255 - c[1], 255 - c[2], c[3]];
+  return [
+    Math.round(c[0] + (inv[0] - c[0]) * amount),
+    Math.round(c[1] + (inv[1] - c[1]) * amount),
+    Math.round(c[2] + (inv[2] - c[2]) * amount),
+    c[3],
+  ];
+});
+
+2) Hue shift
+//> Hue shift using angle parameter (degrees)
+copy();
+const deg = param.slider('Hue shift (deg)', 45, 0, 360, 1, true);
+function rgb2hsv([r,g,b,a]) { r/=255; g/=255; b/=255; const max=Math.max(r,g,b),min=Math.min(r,g,b); const d=max-min; let h=0; const s=max===0?0:d/max; const v=max; if(d!==0){if(max===r)h=((g-b)/d)%6;else if(max===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;if(h<0)h+=360;} return [h,s,v,a]; }
+function hsv2rgb([h,s,v,a]) { const c=v*s; const x=c*(1-Math.abs(((h/60)%2)-1)); const m=v-c; let r=0,g=0,b=0; if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;} else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;} return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255),a]; }
+filter((c)=>{ let [h,s,v,a]=rgb2hsv(c); h=(h+deg)%360; return hsv2rgb([h,s,v,a]); });
+
+3) Generate checkerboard
+//> Generate a checkerboard pattern
+use(-1);
+const size = param.number('Cell size', 16, 2, 128, 1);
+gen((x,y)=>{ const a = ((x/size)|0 + (y/size)|0) % 2; const c = a?255:0; return [c,c,c,255]; }, 512, 512);
+
+4) Blend two results from slots
+//> Blend Slot 1 and Slot 2 with adjustable mix; output on Target
+const mix = param.slider('Mix', 0.5, 0, 1, 0.01, true);
+use(1); copyFrom(0); // store source in Slot 1
+use(2); gen((x,y)=>[x%255,y%255,((x^y)&255),255], 512, 512); // create a generated image in Slot 2
+const m1 = getPixelMap(1), m2 = getPixelMap(2);
+use(-1);
+combine(m1, m2, (c1, c2)=>[
+  Math.round(c1[0]*(1-mix)+c2[0]*mix),
+  Math.round(c1[1]*(1-mix)+c2[1]*mix),
+  Math.round(c1[2]*(1-mix)+c2[2]*mix),
+  255
+]);
+
+5) Crop and resize
+//> Center crop to 256x256, then resize to 1024x1024
+copy();
+crop(256,256,0.5,0.5);
+resize(1024);
+
+6) Animated ripple using setFrameHandler
+//> Animated ripple effect reacting to time
+const speed = param.slider('Speed', 1, 0.1, 5, 0.1);
+const amp = param.slider('Amplitude', 5, 0, 20, 0.5);
+setFrameHandler((ctx)=>{
+  const t = ctx.time * speed;
+  const src = get(0);
+  use(-1);
+  const w = width, h = height;
+  gen((x,y)=>{
+    const dx = Math.sin((y+t)/20)*amp;
+    const sx = Math.max(0, Math.min(w-1, x+dx));
+    const c = getPixelMap(0).get(sx|0, y);
+    return c;
+  }, w, h);
+});
+
+7) Per-channel tweak
+//> Raise red channel, lower blue
+copy();
+filterR((r)=>Math.min(255, r+40));
+filterB((b)=>Math.max(0, b-40));
+
+Notes
+- Always think in IDs: -1 target, 0 source, 1.. slots.
+- Use copy()/copyFrom()/copyTo() to move data.
+- Use params for interactivity; prefer slider() with liveUpdate true for real-time.
+- Use //> for doc lines so the editor shows helpful docs.
+- For reading colors, use getPixelMap(id).get(x,y). For writing, use generate/filter/combine and render to a target via use().
+
+---
+
+Now generate the requested snippet using the above API and conventions.
