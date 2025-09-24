@@ -7,13 +7,14 @@
     "start": "npm run dev",
     "dev": "parcel src/index.html",
     "build": "parcel build src/index.html",
-    "build:editor": "npm run process-examples && parcel build src/editor/editor.html --out-dir dist/editor --public-url ./ --no-minify && node scripts/fix-editor-public-urls.js",
+    "build:editor": "npm run process-examples && rimraf dist/editor && parcel build src/editor/editor.html --out-dir dist/editor --public-url ./ --no-minify && node scripts/fix-editor-public-urls.js",
     "demo": "parcel src/demo/demo.html",
     "editor": "parcel src/editor/editor.html",
     "test": "jest",
     "dist": "npm run build:editor",
     "process-examples": "node scripts/process-examples.js",
-    "dev:editor": "npm run process-examples && parcel src/editor/editor.html"
+    "dev:editor": "npm run process-examples && parcel src/editor/editor.html",
+    "clean": "rimraf dist"
   },
   "author": "marverati",
   "license": "ISC",
@@ -24,7 +25,8 @@
     "parcel-bundler": "^1.12.5",
     "ts-jest": "^29.2.3",
     "typescript": "^4.9.3",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "rimraf": "^5.0.5"
   },
   "dependencies": {
   }
