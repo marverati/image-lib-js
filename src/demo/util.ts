@@ -1,4 +1,8 @@
 
+export function clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+}
+
 export function exposeToWindow(obj: Record<string, Object>) {
     for (const name of Object.keys(obj)) {
         window[name] = obj[name];

@@ -1,5 +1,15 @@
-import { Canvas, CanvasRenderingContext2D, createCanvas, Image } from "canvas";
+// Types for optional canvas module
+type CanvasType = any;
+type NodeImage = any;
+
+// Canvas functionality - will use browser APIs when available
+let createNodeCanvas: ((width: number, height: number) => CanvasType) | undefined;
+let NodeImageClass: any;
 import { Color, ColorRGB, ImageChannelFilter, ImageFilter, ImageGenerator, PixelMap } from "./PixelMap";
+
+// Re-export types that are used by other modules
+export type { Color, ColorRGB, ImageChannelFilter, ImageFilter, ImageGenerator };
+export { PixelMap } from "./PixelMap";
 
 
 
@@ -87,8 +97,11 @@ export class ImageLib {
         return (this.generate as any)(generatorFunc, a.width, a.height);
     }
 
-    public static createCanvas(width = this.width, height = this.height): HTMLCanvasElement | Canvas {
-        const cnv = typeof document !== 'undefined' ? document.createElement('canvas') : createCanvas(width, height);
+    public static createCanvas(width = this.width, height = this.height): HTMLCanvasElement | CanvasType {
+        const cnv = typeof document !== 'undefined' ? document.createElement('canvas') : createNodeCanvas?.(width, height);
+        if (!cnv) {
+            throw new Error('Canvas creation failed: neither browser Canvas nor node-canvas available');
+        }
         cnv.width = width;
         cnv.height = height;
         return cnv;
@@ -100,15 +113,15 @@ export class ImageLib {
         return ctx;
     }
 
-    public static createImageFromCanvas(canvas: HTMLCanvasElement | Canvas): HTMLImageElement | Image {
-        const img = new Image();
+    public static createImageFromCanvas(canvas: HTMLCanvasElement | CanvasType): HTMLImageElement | NodeImage {
+        const img = typeof Image !== 'undefined' ? new Image() : new NodeImageClass();
         img.src = canvas.toDataURL();
         return img;
     }
 
-    public static createCanvasFromImage(img: HTMLImageElement | Image): HTMLCanvasElement | Canvas {
+    public static createCanvasFromImage(img: HTMLImageElement | NodeImage): HTMLCanvasElement | CanvasType {
         const ctx = this.createCanvasContext(img.naturalWidth ?? img.width, img.naturalHeight ?? img.height);
-        ctx.drawImage(img as Image, 0, 0);
+        ctx.drawImage(img as any, 0, 0);
         return ctx.canvas;
     }
 
@@ -265,7 +278,7 @@ export class RGBAPixelMap extends PixelMap<Color> {
         return this.fromCanvas(ImageLib.createCanvasFromImage(img));
     }
 
-    public static fromCanvas(cnv: HTMLCanvasElement | Canvas): RGBAPixelMap {
+    public static fromCanvas(cnv: HTMLCanvasElement | CanvasType): RGBAPixelMap {
         const ctx = cnv.getContext("2d") as CanvasRenderingContext2D;
         const w = cnv.width;
         const h = cnv.height;

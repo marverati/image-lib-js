@@ -67,6 +67,8 @@ window.addEventListener('load', async () => {
         getImageFromSlot,
         storeImageInSlot,
     );
+    // Ensure one initial empty slot is rendered at startup
+    updateImageSlots();
     sourceContext = sourceCanvas.getContext("2d");
     targetContext = targetCanvas.getContext("2d");
 
@@ -445,7 +447,8 @@ function updateImageSlots() {
         }
         createElement("span", "", `${i + 1}`, el);
         (el as any).storageIndex = i;
-        turnIntoImageDropTarget(el, () => {}, console.error);
+        // Wire drop to store image into the chosen slot
+        turnIntoImageDropTarget(el, (img, fieldId) => storeImageInSlot(img, fieldId), console.error);
     }
 }
 

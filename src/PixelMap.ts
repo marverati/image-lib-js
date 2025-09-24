@@ -1,4 +1,5 @@
-import { Canvas, Image } from "canvas";
+// Types for optional canvas module - these will be available via ImageLib
+type CanvasType = any;
 import { absMod, clamp, mirrorOutsideRange } from "./utility/util";
 import { ImageLib } from "./image-lib";
 
@@ -247,7 +248,7 @@ export abstract class PixelMap<T> {
 
     abstract blend(v1: T, v2: T, blendFactor: number): T;
 
-    toCanvas(canvas?: HTMLCanvasElement | null): HTMLCanvasElement | Canvas {
+    toCanvas(canvas?: HTMLCanvasElement | null): HTMLCanvasElement | CanvasType {
         if (canvas && canvas.width !== this.width) {
             canvas.width = this.width;
         }
@@ -270,7 +271,7 @@ export abstract class PixelMap<T> {
         return ctx.canvas;
     }
 
-    toImage(): HTMLImageElement | Image {
+    toImage(): HTMLImageElement | any {
         const cnv = this.toCanvas();
         return ImageLib.createImageFromCanvas(cnv);
     }

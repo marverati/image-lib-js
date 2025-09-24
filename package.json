@@ -27,6 +27,5 @@
     "ts-node": "^10.9.2"
   },
   "dependencies": {
-    "canvas": "^2.11.2"
   }
 }
