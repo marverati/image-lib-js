@@ -10,7 +10,7 @@ import { clamp, getRangeMapper, mapRange } from "../utility/util";
 import { api, applyImage, generatorSize, initCanvases, initSlotUsage, sourceCanvas, targetCanvas, wrapCanvasInPixelMap, wrapImageInPixelMap } from "./editingApi";
 import { setupDocumentation } from "./documentation";
 import { ParameterHandler } from "./parameters";
-import { readAndApplyShareUrlIfSet, getShareUrl } from "./share";
+import { getShareUrl, parseScriptParam, setScriptParam, clearScriptParam, ScriptCategory } from "./share";
 import { markScriptLoaded, markScriptStarted, setupInteraction } from "./interaction";
 import { ColorPicker } from "./ColorPicker";
 import publicExamples from "./public_examples.json";
@@ -38,6 +38,12 @@ function setEditorTitle(origin: 'user'|'public'|'examples', name: string) {
     const readable = name.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const originReadable = origin === 'user' ? 'User script' : (origin === 'public' ? 'Public script' : 'Example');
     document.title = `Image Editor - ${originReadable} - ${readable}`;
+    // Update in-page title
+    const h1 = document.getElementById('current-script-title');
+    if (h1) {
+        h1.textContent = readable;
+        h1.classList.remove('hidden');
+    }
 }
 
 let isDirty = false;
@@ -102,7 +108,13 @@ window.addEventListener('load', async () => {
     fileTreeToggleButton.addEventListener('click', () => {
         toggleFileTree();
     });
-    toggleFileTree(false);
+    // Restore sidebar open/closed state from localStorage (default: open)
+    const remembered = localStorage.getItem('fileTreeOpen');
+    if (remembered === 'false') {
+        toggleFileTree(false);
+    } else {
+        toggleFileTree(true);
+    }
 
     exposeToWindow(api);
     exposeToWindow({param: parameterHandler});
@@ -134,32 +146,13 @@ window.addEventListener('load', async () => {
     quotaWidget = new QuotaWidget(document.querySelector('#file-tree-footer'), persistentStorage);
     prepareTextarea();
 
-    // If URL has ?load=NAME, try to select the corresponding Public script
-    readAndApplyShareUrlIfSet().then(async (name) => {
-        if (name) {
-            const rows = Array.from(document.querySelectorAll('#file-tree-list .tree-item')) as HTMLElement[];
-            const publicRow = rows.find(r => r.parentElement?.previousSibling &&
-                (r.parentElement.previousSibling as HTMLElement).textContent?.includes('Public') && r.textContent?.trim() === name);
-            if (publicRow) {
-                publicRow.click();
-                toggleDocuMode(true);
-                return;
-            }
-            // Fallback: fetch and show read-only if not found in the list
-            try {
-                currentScriptOrigin = 'public';
-                currentUserCodeName = null;
-                const url = getShareUrl(name);
-                const res = await fetch(url);
-                const code = await res.text();
-                setEditorReadOnly(true, name, code);
-                setEditorTitle('public', name);
-                toggleDocuMode(true);
-            } catch (e) {
-                console.warn('Failed to auto-load shared script', name, e);
-            }
-        }
-    }).catch(console.error);
+    // Deep-linking: ?script=<category>/<name> (legacy ?load is auto-migrated)
+    await applyDeepLinkFromUrl(true);
+
+    // Support back/forward navigation without reload
+    window.addEventListener('popstate', async () => {
+        await applyDeepLinkFromUrl(false);
+    });
 });
 
 function markDirty(dirty: boolean) {
@@ -235,6 +228,7 @@ async function buildFileTree() {
         if (name) {
             addUserItem(userSection.body, name);
             await selectUserScript(name);
+            setScriptParam('user', name);
         }
     };
     userSection.header.appendChild(newBtn);
@@ -287,7 +281,11 @@ function addUserItem(parent: HTMLElement, name: string) {
             if (selectedRow === row) selectedRow = null;
         }
     };
-    row.onclick = async () => { setSelectedRow(row); await selectUserScript(name); };
+    row.onclick = async () => {
+        setSelectedRow(row);
+        await selectUserScript(name);
+        setScriptParam('user', name);
+    };
     row.appendChild(title); row.appendChild(del);
     parent.appendChild(row);
 }
@@ -304,6 +302,7 @@ function addPublicItem(parent: HTMLElement, name: string) {
         const code = await res.text();
         setEditorReadOnly(true, name, code);
         setEditorTitle('public', name);
+        setScriptParam('public', name);
     };
     row.textContent = name;
     parent.appendChild(row);
@@ -319,6 +318,7 @@ function addExampleItem(parent: HTMLElement, name: string) {
         const code = examples[name];
         setEditorReadOnly(true, name, code);
         setEditorTitle('examples', name);
+        setScriptParam('examples', name);
     };
     row.textContent = name;
     parent.appendChild(row);
@@ -345,6 +345,7 @@ function setEditorReadOnly(readOnly: boolean, title: string, code: string) {
             saveSnippetNames();
             saveSnippet(newName);
             selectUserScript(newName);
+            setScriptParam('user', newName);
         };
         (document.getElementById('editor-text') as HTMLElement).appendChild(btn);
     }
@@ -621,6 +622,76 @@ function toggleFileTree(enabled = !fileTreeOpen) {
     } else {
         container.classList.add('collapsed');
     }
+    try { localStorage.setItem('fileTreeOpen', String(fileTreeOpen)); } catch {}
 }
 
-async function addExamples() { /* no-op: replaced by buildFileTree */ }
+async function applyDeepLinkFromUrl(replaceOnSuccess: boolean) {
+    const info = parseScriptParam();
+    if (!info) return;
+    const { category, name } = info;
+    // Try to find and open matching script
+    try {
+        if (category === 'user') {
+            // Verify it exists in storage; if not, alert and clear param
+            const stored = await persistentStorage.getValue(SNIPPET_KEY_PREFIX + name);
+            if (!stored && !snippetNames.has(name)) throw new Error('not found');
+            // Ensure it exists in the UI
+            if (!document.querySelector(`[data-user-script="${cssEscape(name)}"]`)) {
+                const userSectionBody = document.querySelector('#file-tree-list')!.children[0].children[1] as HTMLElement; // User section body
+                addUserItem(userSectionBody, name);
+            }
+            await selectUserScript(name);
+            if (replaceOnSuccess) setScriptParam('user', name, true);
+            toggleDocuMode(true);
+            return;
+        }
+        if (category === 'public') {
+            // Try to select an existing Public row
+            const publicRows = Array.from(document.querySelectorAll('#file-tree-list .tree-item')) as HTMLElement[];
+            const row = publicRows.find(r => r.parentElement?.previousSibling &&
+                (r.parentElement.previousSibling as HTMLElement).textContent?.includes('Public') && r.textContent?.trim() === name);
+            if (row) {
+                setSelectedRow(row as HTMLElement);
+                currentScriptOrigin = 'public';
+                currentUserCodeName = null;
+                const url = getShareUrl(name);
+                const res = await fetch(url);
+                const code = await res.text();
+                setEditorReadOnly(true, name, code);
+                setEditorTitle('public', name);
+                if (replaceOnSuccess) setScriptParam('public', name, true);
+                toggleDocuMode(true);
+                return;
+            }
+            // Fallback: fetch and show read-only if not found in list
+            currentScriptOrigin = 'public';
+            currentUserCodeName = null;
+            const url = getShareUrl(name);
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('not found');
+            const code = await res.text();
+            setEditorReadOnly(true, name, code);
+            setEditorTitle('public', name);
+            if (replaceOnSuccess) setScriptParam('public', name, true);
+            toggleDocuMode(true);
+            return;
+        }
+        if (category === 'examples') {
+            if (examples[name]) {
+                currentScriptOrigin = 'examples';
+                currentUserCodeName = null;
+                const code = examples[name];
+                setEditorReadOnly(true, name, code);
+                setEditorTitle('examples', name);
+                if (replaceOnSuccess) setScriptParam('examples', name, true);
+                toggleDocuMode(true);
+                return;
+            } else {
+                throw new Error('not found');
+            }
+        }
+    } catch (e) {
+        alert(`Script '${name}' could not be found`);
+        clearScriptParam();
+    }
+}
