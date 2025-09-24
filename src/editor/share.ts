@@ -8,26 +8,20 @@ export type ScriptCategory = 'user' | 'public' | 'examples';
 
 /**
  * Parse the current URL for a script deep link. If a legacy ?load= is present,
- * it will be migrated to ?script=public:<name> via history.replaceState.
+ * it will be migrated to ?script=public:<name> via history.replaceState without encoding ':'
  */
 export function parseScriptParam(): { category: ScriptCategory; name: string } | null {
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
-
-    // Migrate legacy ?load=name to ?script=public:name
-    if (!params.get('script') && params.get('load')) {
-        const legacy = cleanUpName(params.get('load')!);
+    // Migrate legacy ?load=name to ?script=public:name if needed
+    if (!hasQueryParam('script') && hasQueryParam('load')) {
+        const legacy = cleanUpName(getQueryParamRaw('load') || '');
         if (legacy) {
-            params.delete('load');
-            params.set('script', `public:${legacy}`);
-            window.history.replaceState({}, '', url.pathname + '?' + params.toString());
+            replaceQueryPreservingEncoding({ script: `public:${legacy}` }, ['load']);
         } else {
-            params.delete('load');
-            window.history.replaceState({}, '', url.pathname + (params.toString() ? '?' + params.toString() : ''));
+            replaceQueryPreservingEncoding({}, ['load']);
         }
     }
 
-    const script = params.get('script');
+    const script = getQueryParamDecoded('script');
     if (!script) return null;
 
     // Accept both category:name (preferred) and category/name (legacy)
@@ -52,30 +46,19 @@ export function parseScriptParam(): { category: ScriptCategory; name: string } |
 }
 
 /**
- * Update the URL's script parameter to the given value.
- * When replace is true, use replaceState, otherwise pushState.
- * Uses ':' as separator for readability (avoids %2F encoding).
+ * Update the URL's script parameter to the given value. Uses ':' separator.
+ * Avoid URLSearchParams to keep ':' visible.
  */
 export function setScriptParam(category: ScriptCategory, name: string, replace = false): void {
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
-    params.delete('load');
-    params.set('script', `${category}:${cleanUpName(name)}`);
-    const newUrl = url.pathname + '?' + params.toString();
-    if (replace) window.history.replaceState({}, '', newUrl); else window.history.pushState({}, '', newUrl);
+    const value = `${category}:${cleanUpName(name)}`;
+    updateQueryPreservingEncoding({ script: value }, ['load'], replace);
 }
 
 /**
  * Remove the script (and legacy load) parameter from the URL.
  */
 export function clearScriptParam(): void {
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
-    params.delete('script');
-    params.delete('load');
-    const qs = params.toString();
-    const newUrl = url.pathname + (qs ? '?' + qs : '');
-    window.history.replaceState({}, '', newUrl);
+    updateQueryPreservingEncoding({}, ['script', 'load'], true);
 }
 
 // Legacy helper retained for compatibility, no longer used by the editor.
@@ -94,11 +77,55 @@ export function getShareUrl(name: string) {
 }
 
 export function getHostedEditorUrl(category: ScriptCategory, name: string) {
-    return `https://rationaltools.org/tools/image-editor/editor.html?script=${encodeURIComponent(category + ':' + name)}`;
+    // Keep ':' readable
+    return `https://rationaltools.org/tools/image-editor/editor.html?script=${category}:${name}`;
 }
 
 function cleanUpName(name: string) {
     return name.replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+// Helpers to manipulate query strings without forcing percent-encoding of ':'
+function getQueryParts(): string[] {
+    const qs = window.location.search.startsWith('?') ? window.location.search.slice(1) : window.location.search;
+    if (!qs) return [];
+    return qs.split('&').filter(Boolean);
+}
+
+function hasQueryParam(name: string): boolean {
+    return getQueryParts().some(p => decodeURIComponent((p.split('=')[0] || '').replace(/\+/g, ' ')) === name);
+}
+
+function getQueryParamRaw(name: string): string | null {
+    for (const p of getQueryParts()) {
+        const [k, v = ''] = p.split('=');
+        if (decodeURIComponent((k || '').replace(/\+/g, ' ')) === name) return v; // raw (still encoded if it was)
+    }
+    return null;
+}
+
+function getQueryParamDecoded(name: string): string | null {
+    const raw = getQueryParamRaw(name);
+    if (raw == null) return null;
+    try { return decodeURIComponent(raw.replace(/\+/g, ' ')); } catch { return raw; }
+}
+
+function updateQueryPreservingEncoding(set: Record<string, string>, remove: string[] = [], replace = false) {
+    const parts = getQueryParts();
+    const kept = parts.filter(p => {
+        const k = decodeURIComponent((p.split('=')[0] || '').replace(/\+/g, ' '));
+        return !remove.includes(k) && !Object.prototype.hasOwnProperty.call(set, k);
+    });
+    for (const [k, v] of Object.entries(set)) {
+        kept.push(`${encodeURIComponent(k)}=${v}`); // key encoded, value raw to keep ':' visible
+    }
+    const newSearch = kept.length ? `?${kept.join('&')}` : '';
+    const newUrl = window.location.pathname + newSearch + window.location.hash;
+    if (replace) window.history.replaceState({}, '', newUrl); else window.history.pushState({}, '', newUrl);
+}
+
+function replaceQueryPreservingEncoding(set: Record<string, string>, remove: string[] = []) {
+    updateQueryPreservingEncoding(set, remove, true);
 }
 
 // Keep in sync with editor.ts readable name
