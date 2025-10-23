@@ -118,3 +118,28 @@ export function capAtDecimals(v: number, decimals: number): string {
         return v.toString();
     }
 }
+
+/**
+ * Takes a value that may exceed the min/max range and eases it into the range using a sigmoid function.
+ * With a sigmoidScale of 1, the original full range will be map to roughly 0.27 to 0.73 in the eased range.
+ * Other sigmoidScale values:
+ * 2 -> 0.12 to 0.88
+ * 3 -> 0.05 to 0.95
+ * 5 -> 0.007 to 0.993 (very steep, in most cases lower scale values are preferred)
+ * The further the value moves outside the original range, the closer the eased value will get to the min or max,
+ * but it will never actually reach it.
+ * @param v 
+ * @param min 
+ * @param max 
+ * @param sigmoidScale 
+ * @returns 
+ */
+export function easeContinuous(v: number, min: number, max: number, sigmoidScale: number): number {
+    const rel = (v - min) / (max - min);
+    const eased = sigmoid((rel - 0.5) * sigmoidScale * 2);
+    return min + eased * (max - min);
+}
+
+export function sigmoid(v: number): number {
+    return 1 / (1 + Math.exp(-v));
+}

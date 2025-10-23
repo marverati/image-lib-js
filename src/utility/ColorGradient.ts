@@ -4,7 +4,7 @@ import { Color, ColorRGB } from "../PixelMap";
 import { Interpolator, Interpolators } from "./interpolation";
 import { blendColors } from "./util";
 
-export type ColorWrapTypes = "clamp" | "repeat" | "mirror" | "transparent";
+export type ColorWrapTypes = "clamp" | "repeat" | "mirror" | "transparent" | "no-wrap";
 
 const DEFAULT_COLOR_WRAP_TYPE: ColorWrapTypes = "clamp";
 
@@ -58,6 +58,12 @@ export default class ColorGradient {
                     }
                 }
                 break;
+            case "no-wrap":
+                this.get = (value: number) => this.colorFunc(value);
+                break;
+            default:
+                throw new Error("Invalid ColorGradient wrapType: " + wrapType);
+
         }
     }
 
@@ -68,7 +74,7 @@ export default class ColorGradient {
     }
 
     public toImage(width = 512, height = 32, rangeFrom = 0, rangeTo = 1) {
-        return this.createPreview(width, height).toImage();
+        return this.createPreview(width, height, rangeFrom, rangeTo).toImage();
     }
 
     public static uniform(

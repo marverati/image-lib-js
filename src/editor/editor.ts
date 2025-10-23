@@ -14,6 +14,8 @@ import { getShareUrl, parseScriptParam, setScriptParam, clearScriptParam, Script
 import { markScriptLoaded, markScriptStarted, setupInteraction } from "./interaction";
 import { ColorPicker } from "./ColorPicker";
 import publicExamples from "./public_examples.json";
+import ColorGradient from "../utility/ColorGradient";
+import { createAutoColorGradient } from "../utility/AutoColorGradient";
 
 /*
     Developer Notes
@@ -139,6 +141,8 @@ window.addEventListener('load', async () => {
         clamp,
         mapRange,
         getRangeMapper,
+        ColorGradient,
+        createAutoColorGradient,
     });
 
     await buildFileTree();

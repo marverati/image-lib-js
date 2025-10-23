@@ -12,6 +12,10 @@ export class Random {
     constructor(seed: number | string) {
         this.seed = this.hashSeed(seed);
         this.currentSeed = this.seed;
+        // Warm up the generator to improve randomness for nearby seeds
+        for (let i = 0; i < 10; i++) {
+            this.random();
+        }
     }
 
     public static seed(seed: number | string): Random {
@@ -91,12 +95,17 @@ export class Random {
      * @param stdDev - The standard deviation of the distribution. Default is 1.
      * @returns A random number following a Gaussian distribution.
      */
-    public gaussian(stdDev: number = 1, mean: number = 0, ): number {
+    public gaussian(mean: number = 0, stdDev: number = 1): number {
         let u = 0, v = 0;
         while (u === 0) u = this.random(); // Convert [0,1) to (0,1)
         while (v === 0) v = this.random(); // Convert [0,1) to (0,1)
         const num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
         return mean + num * stdDev;
+    }
+
+    public logGaussian(mean: number, logStdDev: number): number {
+        const normalValue = this.gaussian(mean, logStdDev);
+        return Math.exp(normalValue);
     }
 }
 
