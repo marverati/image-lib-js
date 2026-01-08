@@ -510,15 +510,15 @@ async function renderJuliaSet(
                     }
                 }
 
-                // if (blackConvergence && i >= randomizedIterations) {
-                //     return [0, 0, 0, 255]; // Black for points inside the set
-                // }
-                // return colorization(i >= randomizedIterations ? 0 : i, pr, pi, zr, zi);
-                const c = i < randomizedIterations ? i : 100 / (sqrDivergenceRadius - maxDist);
-                if (i >= randomizedIterations) {
-                    totalMax = Math.max(totalMax, maxDist);
+                if (blackConvergence && i >= randomizedIterations) {
+                    return [0, 0, 0, 255]; // Black for points inside the set
                 }
-                return colorization(c, pr, pi, zr, zi);
+                return colorization(i >= randomizedIterations ? 0 : i, pr, pi, zr, zi);
+                // const c = i < randomizedIterations ? i : 100 / (sqrDivergenceRadius - maxDist);
+                // if (i >= randomizedIterations) {
+                //     totalMax = Math.max(totalMax, maxDist);
+                // }
+                // return colorization(c, pr, pi, zr, zi);
             }, size, size);
 
             // Report completion
@@ -577,7 +577,7 @@ function getColorAngularFunc(angleMultiplier = 1, iterationMultiplier = 1) {
 }
 
 const availableColorizations = [
-    { f: getColorClassic, p: 90.2 },
+    { f: getColorClassic, p: 0.2 },
     { f: getColorSmooth, p: 1.0 },
     { f: getColorPeriodic, p: 0.1 },
     { f: getColorAngularFunc(1), p: 0.1 },
