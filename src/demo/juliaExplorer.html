@@ -94,7 +94,7 @@
             background: rgba(255, 255, 255, 0.15);
         }
 
-        button {
+        button, a.button-link {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
             border-radius: 8px;
@@ -105,18 +105,20 @@
             transition: all 0.3s ease;
             font-size: 14px;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            text-decoration: none;
+            display: inline-block;
         }
 
-        button:hover {
+        button:hover, a.button-link:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
         }
 
-        button:active {
+        button:active, a.button-link:active {
             transform: translateY(0);
         }
 
-        button:disabled {
+        button:disabled, a.button-link[style*="pointer-events: none"] {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
@@ -139,6 +141,8 @@
             background: rgba(0, 0, 0, 0.3);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             border: 2px solid transparent;
+            display: block;
+            text-decoration: none;
         }
 
         .grid-item:hover {
@@ -299,13 +303,13 @@
             </div>
 
             <div class="control-row">
-                <button id="backBtn" disabled>← Back</button>
-                <button id="forwardBtn" disabled>Forward →</button>
-                <button id="zoomInBtn">Zoom In (×0.5)</button>
-                <button id="zoomOutBtn">Zoom Out (×2)</button>
-                <button id="renderHdBtn">Render HD (1024×1024)</button>
-                <button id="renderUhdBtn">Render UHD (2048×2048)</button>
-                <button id="resetBtn">Reset</button>
+                <a href="#" id="backBtn" class="button-link" title="Go back in history (← or H)">← Back</a>
+                <a href="#" id="forwardBtn" class="button-link" title="Go forward in history (→ or L)">Forward →</a>
+                <a href="#" id="zoomInBtn" class="button-link" title="Zoom in by 0.5× (+ or =)">Zoom In (×0.5)</a>
+                <a href="#" id="zoomOutBtn" class="button-link" title="Zoom out by 2× (-)">Zoom Out (×2)</a>
+                <a href="#" id="renderHdBtn" class="button-link" title="Render high-definition 1024×1024 image">Render HD (1024×1024)</a>
+                <a href="#" id="renderUhdBtn" class="button-link" title="Render ultra-high-definition 1536×1536 image">Render UHD (1536×1536)</a>
+                <a href="#" id="resetBtn" class="button-link" title="Reset to default view (R)">Reset</a>
             </div>
         </div>
 
@@ -315,6 +319,8 @@
 
         <div class="info">
             <p>Click any outer image to explore that Julia set • Click center to re-randomize outer fractals</p>
+            <p>Right-click or middle-click any button or image to open in a new tab</p>
+            <p>Keyboard: ← → (or H L) = History | + - = Zoom | R = Reset | C = Next Color | V = Next Variation</p>
             <p>Share your discoveries by copying the URL!</p>
         </div>
     </div>

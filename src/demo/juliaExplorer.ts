@@ -49,13 +49,13 @@ let colorSeedInput: HTMLInputElement;
 let variationSeedInput: HTMLInputElement;
 let centerDisplay: HTMLElement;
 let stdevDisplay: HTMLElement;
-let backBtn: HTMLButtonElement;
-let forwardBtn: HTMLButtonElement;
-let zoomInBtn: HTMLButtonElement;
-let zoomOutBtn: HTMLButtonElement;
-let renderHdBtn: HTMLButtonElement;
-let renderUhdBtn: HTMLButtonElement;
-let resetBtn: HTMLButtonElement;
+let backBtn: HTMLAnchorElement;
+let forwardBtn: HTMLAnchorElement;
+let zoomInBtn: HTMLAnchorElement;
+let zoomOutBtn: HTMLAnchorElement;
+let renderHdBtn: HTMLAnchorElement;
+let renderUhdBtn: HTMLAnchorElement;
+let resetBtn: HTMLAnchorElement;
 let overlay: HTMLElement;
 let overlayCanvas: HTMLCanvasElement;
 let overlayClose: HTMLElement;
@@ -68,6 +68,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateColorGradient();
     saveToHistory();
     renderGrid();
+    checkForAutoActions();
 });
 
 function initializeDOM() {
@@ -76,13 +77,13 @@ function initializeDOM() {
     variationSeedInput = document.getElementById('variationSeed') as HTMLInputElement;
     centerDisplay = document.getElementById('centerDisplay')!;
     stdevDisplay = document.getElementById('stdevDisplay')!;
-    backBtn = document.getElementById('backBtn') as HTMLButtonElement;
-    forwardBtn = document.getElementById('forwardBtn') as HTMLButtonElement;
-    zoomInBtn = document.getElementById('zoomInBtn') as HTMLButtonElement;
-    zoomOutBtn = document.getElementById('zoomOutBtn') as HTMLButtonElement;
-    renderHdBtn = document.getElementById('renderHdBtn') as HTMLButtonElement;
-    renderUhdBtn = document.getElementById('renderUhdBtn') as HTMLButtonElement;
-    resetBtn = document.getElementById('resetBtn') as HTMLButtonElement;
+    backBtn = document.getElementById('backBtn') as HTMLAnchorElement;
+    forwardBtn = document.getElementById('forwardBtn') as HTMLAnchorElement;
+    zoomInBtn = document.getElementById('zoomInBtn') as HTMLAnchorElement;
+    zoomOutBtn = document.getElementById('zoomOutBtn') as HTMLAnchorElement;
+    renderHdBtn = document.getElementById('renderHdBtn') as HTMLAnchorElement;
+    renderUhdBtn = document.getElementById('renderUhdBtn') as HTMLAnchorElement;
+    resetBtn = document.getElementById('resetBtn') as HTMLAnchorElement;
     overlay = document.getElementById('overlay')!;
     overlayCanvas = document.getElementById('overlayCanvas') as HTMLCanvasElement;
     overlayClose = document.getElementById('overlayClose')!;
@@ -91,29 +92,50 @@ function initializeDOM() {
     // Event listeners
     colorSeedInput.addEventListener('change', onColorSeedChange);
     variationSeedInput.addEventListener('change', onVariationSeedChange);
-    backBtn.addEventListener('click', goBack);
-    forwardBtn.addEventListener('click', goForward);
-    zoomInBtn.addEventListener('click', zoomIn);
-    zoomOutBtn.addEventListener('click', zoomOut);
-    renderHdBtn.addEventListener('click', () => renderHD(SIZE_HD));
-    renderUhdBtn.addEventListener('click', () => renderHD(SIZE_UHD));
-    resetBtn.addEventListener('click', reset);
+    backBtn.addEventListener('click', (e) => { e.preventDefault(); goBack(); });
+    forwardBtn.addEventListener('click', (e) => { e.preventDefault(); goForward(); });
+    zoomInBtn.addEventListener('click', (e) => { e.preventDefault(); zoomIn(); });
+    zoomOutBtn.addEventListener('click', (e) => { e.preventDefault(); zoomOut(); });
+    renderHdBtn.addEventListener('click', (e) => { e.preventDefault(); renderHD(SIZE_HD); });
+    renderUhdBtn.addEventListener('click', (e) => { e.preventDefault(); renderHD(SIZE_UHD); });
+    resetBtn.addEventListener('click', (e) => { e.preventDefault(); reset(); });
     overlayClose.addEventListener('click', closeOverlay);
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) closeOverlay();
     });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeOverlay();
+        if (e.key === 'Escape') {
+            closeOverlay();
+        } else if (e.key === 'ArrowLeft' || e.key === 'h') {
+            goBack();
+        } else if (e.key === 'ArrowRight' || e.key === 'l') {
+            goForward();
+        } else if (e.key === '+' || e.key === '=') {
+            zoomIn();
+        } else if (e.key === '-') {
+            zoomOut();
+        } else if (e.key === 'r') {
+            reset();
+        } else if (e.key === 'c' || e.key === 'C') {
+            currentParams.colorSeed++;
+            colorSeedInput.value = currentParams.colorSeed.toString();
+            onColorSeedChange();
+        } else if (e.key === 'v' || e.key === 'V') {
+            currentParams.variationSeed++;
+            variationSeedInput.value = currentParams.variationSeed.toString();
+            onVariationSeedChange();
+        }
     });
 
     // Create grid items
     for (let i = 0; i < 9; i++) {
-        const div = document.createElement('div');
-        div.className = 'grid-item';
-        if (i === 4) div.classList.add('center');
-        div.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-        div.addEventListener('click', () => onGridItemClick(i));
-        gridContainer.appendChild(div);
+        const a = document.createElement('a');
+        a.className = 'grid-item';
+        a.href = '#';
+        if (i === 4) a.classList.add('center');
+        a.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        a.addEventListener('click', (e) => { e.preventDefault(); onGridItemClick(i); });
+        gridContainer.appendChild(a);
     }
 }
 
@@ -141,6 +163,18 @@ function loadParamsFromURL() {
     updateDisplay();
 }
 
+function checkForAutoActions() {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    
+    if (action === 'renderHD') {
+        // Wait a bit for grid to render first
+        setTimeout(() => renderHD(SIZE_HD), 1000);
+    } else if (action === 'renderUHD') {
+        setTimeout(() => renderHD(SIZE_UHD), 1000);
+    }
+}
+
 function updateURL() {
     const params = new URLSearchParams();
     params.set('cr', currentParams.centerReal.toFixed(6));
@@ -151,6 +185,57 @@ function updateURL() {
     
     const newURL = `${window.location.pathname}?${params.toString()}`;
     window.history.pushState({}, '', newURL);
+    updateButtonURLs();
+}
+
+function buildURL(overrides: Partial<JuliaParams> = {}, action?: string): string {
+    const params = new URLSearchParams();
+    const p = { ...currentParams, ...overrides };
+    params.set('cr', p.centerReal.toFixed(6));
+    params.set('ci', p.centerImag.toFixed(6));
+    params.set('sd', p.stdev.toFixed(6));
+    params.set('cs', p.colorSeed.toString());
+    params.set('vs', p.variationSeed.toString());
+    if (action) params.set('action', action);
+    return `${window.location.pathname}?${params.toString()}`;
+}
+
+function updateButtonURLs() {
+    // Update href attributes for all action buttons
+    if (historyIndex > 0) {
+        backBtn.href = buildURL(history[historyIndex - 1]);
+    } else {
+        backBtn.href = '#';
+    }
+    
+    if (historyIndex < history.length - 1) {
+        forwardBtn.href = buildURL(history[historyIndex + 1]);
+    } else {
+        forwardBtn.href = '#';
+    }
+    
+    zoomInBtn.href = buildURL({ stdev: currentParams.stdev * 0.5, variationSeed: currentParams.variationSeed + 1 });
+    zoomOutBtn.href = buildURL({ stdev: currentParams.stdev * 2, variationSeed: currentParams.variationSeed + 1 });
+    renderHdBtn.href = buildURL({}, 'renderHD');
+    renderUhdBtn.href = buildURL({}, 'renderUHD');
+    resetBtn.href = buildURL({ centerReal: 0, centerImag: 0, stdev: 1 });
+    
+    // Update grid item URLs
+    for (let i = 0; i < 9; i++) {
+        const a = gridContainer.children[i] as HTMLAnchorElement;
+        if (gridItems[i]) {
+            if (i === 4) {
+                a.href = buildURL({ variationSeed: currentParams.variationSeed + 1 });
+            } else {
+                a.href = buildURL({ 
+                    centerReal: gridItems[i].real, 
+                    centerImag: gridItems[i].imag, 
+                    stdev: currentParams.stdev * 0.75,
+                    variationSeed: currentParams.variationSeed + 1 
+                });
+            }
+        }
+    }
 }
 
 function updateDisplay() {
@@ -177,8 +262,22 @@ function saveToHistory() {
 }
 
 function updateHistoryButtons() {
-    backBtn.disabled = historyIndex <= 0;
-    forwardBtn.disabled = historyIndex >= history.length - 1;
+    // For anchor elements, we use pointer-events and opacity to simulate disabled state
+    if (historyIndex <= 0) {
+        backBtn.style.pointerEvents = 'none';
+        backBtn.style.opacity = '0.5';
+    } else {
+        backBtn.style.pointerEvents = '';
+        backBtn.style.opacity = '';
+    }
+    
+    if (historyIndex >= history.length - 1) {
+        forwardBtn.style.pointerEvents = 'none';
+        forwardBtn.style.opacity = '0.5';
+    } else {
+        forwardBtn.style.pointerEvents = '';
+        forwardBtn.style.opacity = '';
+    }
 }
 
 function goBack() {
@@ -353,9 +452,18 @@ async function renderGrid() {
     
     statusElement.textContent = '';
     isRendering = false;
+    updateButtonURLs();
 }
 
-async function renderJuliaSet(cr: number, ci: number, size: number, iterations: number, gridIndex?: number, renderingId?: number): Promise<RGBAPixelMap> {
+async function renderJuliaSet(
+    cr: number, 
+    ci: number, 
+    size: number, 
+    iterations: number, 
+    gridIndex?: number, 
+    renderingId?: number,
+    onProgress?: (progress: number) => void
+): Promise<RGBAPixelMap> {
     const outerBound = 1.6;
     const blackConvergence = (currentParams.colorSeed % 4) < 2;
     const colorization = getColorizationForSeed(currentParams.colorSeed);
@@ -367,14 +475,25 @@ async function renderJuliaSet(cr: number, ci: number, size: number, iterations: 
                 resolve(null as any);
                 return;
             }
-            
+
+            let totalMax = 0;
+            // R = (1 + √(1 + 4|c|))/2
+            const divergenceRadius = Math.min(2, (1 + Math.sqrt(1 + 4 * Math.sqrt(cr * cr + ci * ci))) / 2);
+            const sqrDivergenceRadius = divergenceRadius * divergenceRadius;
+
             const map = ImageLib.generate((x, y) => {
+                // Report progress every 10th row at the start of the row
+                if (onProgress && x === 0 && y % 10 === 0) {
+                    onProgress(y / size);
+                }
+                
                 const randomizedIterations = iterations + Math.random() ** 2 * (ITERATIONS_UHD - iterations);
                 // Map pixel space to [-2, 2]x[-2, 2] space
                 let zr = (x - size / 2) / (size / 4) * outerBound / 2;
                 let zi = (y - size / 2) / (size / 4) * outerBound / 2;
                 let pr = zr;
                 let pi = zi;
+                let maxDist = 0;
                 
                 let i = 0;
                 for (; i < randomizedIterations; i++) {
@@ -383,17 +502,29 @@ async function renderJuliaSet(cr: number, ci: number, size: number, iterations: 
                     // Apply Julia formula: z = z^2 + c
                     zr = pr * pr - pi * pi + cr;
                     zi = 2 * pr * pi + ci;
-                    if (zr * zr + zi * zi > 4) {
+                    const dist = zr * zr + zi * zi;
+                    if (dist > sqrDivergenceRadius) {
                         break;
+                    } else {
+                        maxDist = Math.max(maxDist, dist);
                     }
                 }
-                
-                if (blackConvergence && i >= randomizedIterations) {
-                    return [0, 0, 0, 255]; // Black for points inside the set
+
+                // if (blackConvergence && i >= randomizedIterations) {
+                //     return [0, 0, 0, 255]; // Black for points inside the set
+                // }
+                // return colorization(i >= randomizedIterations ? 0 : i, pr, pi, zr, zi);
+                const c = i < randomizedIterations ? i : 100 / (sqrDivergenceRadius - maxDist);
+                if (i >= randomizedIterations) {
+                    totalMax = Math.max(totalMax, maxDist);
                 }
-                const t = i >= randomizedIterations ? 0 : i / 256;
-                return colorization(i >= randomizedIterations ? 0 : i, pr, pi, zr, zi);
+                return colorization(c, pr, pi, zr, zi);
             }, size, size);
+
+            // Report completion
+            if (onProgress) {
+                onProgress(1.0);
+            }
 
             // Check again after generation
             if (abortRendering) {
@@ -446,7 +577,7 @@ function getColorAngularFunc(angleMultiplier = 1, iterationMultiplier = 1) {
 }
 
 const availableColorizations = [
-    { f: getColorClassic, p: 0.2 },
+    { f: getColorClassic, p: 90.2 },
     { f: getColorSmooth, p: 1.0 },
     { f: getColorPeriodic, p: 0.1 },
     { f: getColorAngularFunc(1), p: 0.1 },
@@ -486,26 +617,46 @@ function projectOntoDivergenceRing(zr: number, zi: number, re: number, img: numb
     return [projectedZr, projectedZi];
 }
 
-function projectOntoDivergenceRingBinary(zr: number, zi: number, re: number, img: number): [number, number] {
-    const magPrev = Math.sqrt(zr * zr + zi * zi);
-    const magCurr = Math.sqrt(re * re + img * img);
-    // We expect that magPrev is < 2 and magCurr is > 2 at divergence
-    // We know that magPrev^2
-}
-
 async function renderHD(size: number) {
     if (isRendering) return;
     
     isRendering = true;
-    renderHdBtn.disabled = true;
-    renderUhdBtn.disabled = true;
+    renderHdBtn.style.pointerEvents = 'none';
+    renderHdBtn.style.opacity = '0.5';
+    renderUhdBtn.style.pointerEvents = 'none';
+    renderUhdBtn.style.opacity = '0.5';
     
     const sizeLabel = size === SIZE_HD ? 'HD' : 'UHD';
+    const originalTitle = document.title;
+    
     statusElement.textContent = `Rendering ${sizeLabel} (${size}×${size})...`;
     
     const centerItem = gridItems[4];
     const iterations = size === SIZE_HD ? ITERATIONS_HD : ITERATIONS_UHD;
-    const rawMap = await renderJuliaSet(centerItem.real, centerItem.imag, size * 2, iterations);
+    
+    // Progress callback - note: this likely won't update the browser UI in real-time
+    // because ImageLib.generate() runs synchronously, but the infrastructure is here
+    // for future async improvements
+    const onProgress = (progress: number) => {
+        const percent = Math.round(progress * 100);
+        document.title = `${percent}% - Julia Explorer`;
+        statusElement.textContent = `Rendering ${sizeLabel} (${size}×${size})... ${percent}%`;
+    };
+    
+    const rawMap = await renderJuliaSet(
+        centerItem.real, 
+        centerItem.imag, 
+        size * 2, 
+        iterations, 
+        undefined, 
+        undefined, 
+        onProgress
+    );
+    
+    // Resizing phase
+    document.title = '99% - Julia Explorer';
+    statusElement.textContent = `Rendering ${sizeLabel} (${size}×${size})... 99% (smoothing)`;
+    
     const map = rawMap.resizeSmooth(size, size);
     
     map.toCanvas(overlayCanvas);
@@ -520,9 +671,13 @@ async function renderHD(size: number) {
     ctx.font = '14px Arial';
     ctx.fillText(`re: ${centerItem.real.toFixed(9)}, im: ${centerItem.imag.toFixed(9)}`, 10, overlayCanvas.height - 10);
     ctx.fillText(`Color Seed: ${currentParams.colorSeed}`, overlayCanvas.width - 200, overlayCanvas.height - 10);
+    
+    document.title = originalTitle;
     statusElement.textContent = '';
-    renderHdBtn.disabled = false;
-    renderUhdBtn.disabled = false;
+    renderHdBtn.style.pointerEvents = '';
+    renderHdBtn.style.opacity = '';
+    renderUhdBtn.style.pointerEvents = '';
+    renderUhdBtn.style.opacity = '';
     isRendering = false;
 }
 
