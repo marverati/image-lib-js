@@ -5,12 +5,14 @@ import ColorGradient from "../utility/ColorGradient";
 import { Random } from "../utility/Random";
 
 const ITERATIONS = 256;
-const ITERATIONS_HD = 1024;
-const ITERATIONS_UHD = 2048;
+const ITERATIONS_HD1 = 1024;
+const ITERATIONS_HD2 = 2048;
+const ITERATIONS_HD3 = 3072;
 const SIZE_LOW = 256;
 const SIZE_HIGH = 512;
-const SIZE_HD = 1024;
-const SIZE_UHD = 1536;
+const SIZE_HD1 = 1024;
+const SIZE_HD2 = 1536;
+const SIZE_HD3 = 2048;
 
 // State management
 interface JuliaParams {
@@ -42,6 +44,7 @@ let gridItems: GridItem[] = [];
 let colorGradient: ColorGradient;
 let isRendering = false;
 let abortRendering = false;
+let currentRenderingId = 0;
 
 // DOM elements
 let gridContainer: HTMLElement;
@@ -53,8 +56,9 @@ let backBtn: HTMLAnchorElement;
 let forwardBtn: HTMLAnchorElement;
 let zoomInBtn: HTMLAnchorElement;
 let zoomOutBtn: HTMLAnchorElement;
-let renderHdBtn: HTMLAnchorElement;
-let renderUhdBtn: HTMLAnchorElement;
+let renderHd1Btn: HTMLAnchorElement;
+let renderHd2Btn: HTMLAnchorElement;
+let renderHd3Btn: HTMLAnchorElement;
 let resetBtn: HTMLAnchorElement;
 let overlay: HTMLElement;
 let overlayCanvas: HTMLCanvasElement;
@@ -81,8 +85,9 @@ function initializeDOM() {
     forwardBtn = document.getElementById('forwardBtn') as HTMLAnchorElement;
     zoomInBtn = document.getElementById('zoomInBtn') as HTMLAnchorElement;
     zoomOutBtn = document.getElementById('zoomOutBtn') as HTMLAnchorElement;
-    renderHdBtn = document.getElementById('renderHdBtn') as HTMLAnchorElement;
-    renderUhdBtn = document.getElementById('renderUhdBtn') as HTMLAnchorElement;
+    renderHd1Btn = document.getElementById('renderHd1Btn') as HTMLAnchorElement;
+    renderHd2Btn = document.getElementById('renderHd2Btn') as HTMLAnchorElement;
+    renderHd3Btn = document.getElementById('renderHd3Btn') as HTMLAnchorElement;
     resetBtn = document.getElementById('resetBtn') as HTMLAnchorElement;
     overlay = document.getElementById('overlay')!;
     overlayCanvas = document.getElementById('overlayCanvas') as HTMLCanvasElement;
@@ -96,8 +101,9 @@ function initializeDOM() {
     forwardBtn.addEventListener('click', (e) => { e.preventDefault(); goForward(); });
     zoomInBtn.addEventListener('click', (e) => { e.preventDefault(); zoomIn(); });
     zoomOutBtn.addEventListener('click', (e) => { e.preventDefault(); zoomOut(); });
-    renderHdBtn.addEventListener('click', (e) => { e.preventDefault(); renderHD(SIZE_HD); });
-    renderUhdBtn.addEventListener('click', (e) => { e.preventDefault(); renderHD(SIZE_UHD); });
+    renderHd1Btn.addEventListener('click', (e) => { e.preventDefault(); renderHD(SIZE_HD1); });
+    renderHd2Btn.addEventListener('click', (e) => { e.preventDefault(); renderHD(SIZE_HD2); });
+    renderHd3Btn.addEventListener('click', (e) => { e.preventDefault(); renderHD(SIZE_HD3); });
     resetBtn.addEventListener('click', (e) => { e.preventDefault(); reset(); });
     overlayClose.addEventListener('click', closeOverlay);
     overlay.addEventListener('click', (e) => {
@@ -167,12 +173,25 @@ function checkForAutoActions() {
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
     
-    if (action === 'renderHD') {
-        // Wait a bit for grid to render first
-        setTimeout(() => renderHD(SIZE_HD), 1000);
-    } else if (action === 'renderUHD') {
-        setTimeout(() => renderHD(SIZE_UHD), 1000);
+    if (action === 'renderHD' || action === 'renderHD1') {
+        // Wait for grid to finish rendering before executing HD render
+        waitForRenderComplete().then(() => renderHD(SIZE_HD1));
+    } else if (action === 'renderUHD' || action === 'renderHD2') {
+        waitForRenderComplete().then(() => renderHD(SIZE_HD2));
+    } else if (action === 'renderHD3') {
+        waitForRenderComplete().then(() => renderHD(SIZE_HD3));
     }
+}
+
+function waitForRenderComplete(): Promise<void> {
+    return new Promise(resolve => {
+        const checkInterval = setInterval(() => {
+            if (!isRendering) {
+                clearInterval(checkInterval);
+                resolve();
+            }
+        }, 100);
+    });
 }
 
 function updateURL() {
@@ -216,8 +235,9 @@ function updateButtonURLs() {
     
     zoomInBtn.href = buildURL({ stdev: currentParams.stdev * 0.5, variationSeed: currentParams.variationSeed + 1 });
     zoomOutBtn.href = buildURL({ stdev: currentParams.stdev * 2, variationSeed: currentParams.variationSeed + 1 });
-    renderHdBtn.href = buildURL({}, 'renderHD');
-    renderUhdBtn.href = buildURL({}, 'renderUHD');
+    renderHd1Btn.href = buildURL({}, 'renderHD1');
+    renderHd2Btn.href = buildURL({}, 'renderHD2');
+    renderHd3Btn.href = buildURL({}, 'renderHD3');
     resetBtn.href = buildURL({ centerReal: 0, centerImag: 0, stdev: 1 });
     
     // Update grid item URLs
@@ -341,7 +361,7 @@ function reset() {
 }
 
 function onGridItemClick(index: number) {
-    if (isRendering) return;
+    // Allow clicks even while rendering - abort mechanism will handle it
 
     if (index === 4) {
         // Center clicked - increment variation seed to re-randomize
@@ -366,7 +386,7 @@ function onGridItemClick(index: number) {
 }
 
 function zoomIn() {
-    if (isRendering) return;
+    // Allow zoom even while rendering - abort mechanism will handle it
     
     currentParams.stdev *= 0.5;
     currentParams.variationSeed++;
@@ -377,7 +397,7 @@ function zoomIn() {
 }
 
 function zoomOut() {
-    if (isRendering) return;
+    // Allow zoom even while rendering - abort mechanism will handle it
     
     currentParams.stdev *= 2;
     currentParams.variationSeed++;
@@ -420,7 +440,8 @@ async function renderGrid() {
     
     isRendering = true;
     abortRendering = false;
-    const renderingId = Date.now(); // Unique ID for this rendering session
+    currentRenderingId = Date.now(); // Unique ID for this rendering session
+    const renderingId = currentRenderingId;
     
     generateGridPositions();
     
@@ -470,8 +491,8 @@ async function renderJuliaSet(
     return new Promise((resolve) => {
         // Use setTimeout to allow UI to update
         setTimeout(() => {
-            // Check if this rendering was aborted
-            if (abortRendering) {
+            // Check if this rendering was aborted or superseded by a newer render
+            if (abortRendering || (renderingId !== undefined && renderingId !== currentRenderingId)) {
                 resolve(null as any);
                 return;
             }
@@ -487,7 +508,7 @@ async function renderJuliaSet(
                     onProgress(y / size);
                 }
                 
-                const randomizedIterations = iterations + Math.random() ** 2 * (ITERATIONS_UHD - iterations);
+                const randomizedIterations = iterations + Math.random() ** 2 * (ITERATIONS_HD2 - iterations);
                 // Map pixel space to [-2, 2]x[-2, 2] space
                 let zr = (x - size / 2) / (size / 4) * outerBound / 2;
                 let zi = (y - size / 2) / (size / 4) * outerBound / 2;
@@ -526,8 +547,8 @@ async function renderJuliaSet(
                 onProgress(1.0);
             }
 
-            // Check again after generation
-            if (abortRendering) {
+            // Check again after generation - ensure this render is still current
+            if (abortRendering || (renderingId !== undefined && renderingId !== currentRenderingId)) {
                 resolve(null as any);
                 return;
             }
@@ -618,21 +639,35 @@ function projectOntoDivergenceRing(zr: number, zi: number, re: number, img: numb
 }
 
 async function renderHD(size: number) {
-    if (isRendering) return;
+    // If already rendering grid, wait for it to complete
+    if (isRendering) {
+        await waitForRenderComplete();
+    }
     
     isRendering = true;
-    renderHdBtn.style.pointerEvents = 'none';
-    renderHdBtn.style.opacity = '0.5';
-    renderUhdBtn.style.pointerEvents = 'none';
-    renderUhdBtn.style.opacity = '0.5';
+    renderHd1Btn.style.pointerEvents = 'none';
+    renderHd1Btn.style.opacity = '0.5';
+    renderHd2Btn.style.pointerEvents = 'none';
+    renderHd2Btn.style.opacity = '0.5';
+    renderHd3Btn.style.pointerEvents = 'none';
+    renderHd3Btn.style.opacity = '0.5';
     
-    const sizeLabel = size === SIZE_HD ? 'HD' : 'UHD';
+    const sizeLabel = size === SIZE_HD1 ? 'HD' : 'UHD';
     const originalTitle = document.title;
     
-    statusElement.textContent = `Rendering ${sizeLabel} (${size}×${size})...`;
+    const initialTitle = `Rendering ${sizeLabel} (${size}×${size})...`
+    statusElement.textContent = initialTitle;
+    document.title = initialTitle;
     
     const centerItem = gridItems[4];
-    const iterations = size === SIZE_HD ? ITERATIONS_HD : ITERATIONS_UHD;
+    let iterations: number;
+    if (size === SIZE_HD1) {
+        iterations = ITERATIONS_HD1;
+    } else if (size === SIZE_HD2) {
+        iterations = ITERATIONS_HD2;
+    } else {
+        iterations = ITERATIONS_HD3;
+    }
     
     // Progress callback - note: this likely won't update the browser UI in real-time
     // because ImageLib.generate() runs synchronously, but the infrastructure is here
@@ -674,10 +709,12 @@ async function renderHD(size: number) {
     
     document.title = originalTitle;
     statusElement.textContent = '';
-    renderHdBtn.style.pointerEvents = '';
-    renderHdBtn.style.opacity = '';
-    renderUhdBtn.style.pointerEvents = '';
-    renderUhdBtn.style.opacity = '';
+    renderHd1Btn.style.pointerEvents = '';
+    renderHd1Btn.style.opacity = '';
+    renderHd2Btn.style.pointerEvents = '';
+    renderHd2Btn.style.opacity = '';
+    renderHd3Btn.style.pointerEvents = '';
+    renderHd3Btn.style.opacity = '';
     isRendering = false;
 }
 
