@@ -16,6 +16,7 @@ import { ColorPicker } from "./ColorPicker";
 import publicExamples from "./public_examples.json";
 import ColorGradient from "../utility/ColorGradient";
 import { createAutoColorGradient } from "../utility/AutoColorGradient";
+import { createHomeButton } from "../utility/homeButton";
 
 /*
     Developer Notes
@@ -77,6 +78,11 @@ window.addEventListener('load', async () => {
     );
     // Ensure one initial empty slot is rendered at startup
     updateImageSlots();
+
+    // Restore drop targets for source and target canvases
+    turnIntoImageDropTarget(sourceCanvas, (img) => applyImage(img, 0), console.error);
+    turnIntoImageDropTarget(targetCanvas, (img) => applyImage(img, -1), console.error);
+
     sourceContext = sourceCanvas.getContext("2d");
     targetContext = targetCanvas.getContext("2d");
 
@@ -699,3 +705,10 @@ async function applyDeepLinkFromUrl(replaceOnSuccess: boolean) {
         clearScriptParam();
     }
 }
+
+
+
+// Home Button for one-click way to Impressum:
+window.addEventListener('load', () => {
+    createHomeButton({ dark: false, anchor: 'bottom-right', fixed: true });
+});

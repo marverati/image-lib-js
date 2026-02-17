@@ -3,6 +3,7 @@ import { ImageLib, RGBAPixelMap } from "../image-lib";
 import { createAutoColorGradient } from "../utility/AutoColorGradient";
 import ColorGradient from "../utility/ColorGradient";
 import { Random } from "../utility/Random";
+import { createHomeButton } from "../utility/homeButton";
 
 const ITERATIONS = 256;
 const ITERATIONS_HD1 = 1024;
@@ -721,3 +722,11 @@ async function renderHD(size: number) {
 function closeOverlay() {
     overlay.classList.remove('active');
 }
+
+
+
+
+// Home Button for one-click way to Impressum:
+window.addEventListener('load', () => {
+    createHomeButton({ dark: true });
+});

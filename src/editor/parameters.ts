@@ -101,7 +101,7 @@ export class ParameterHandler {
     public toggle(id: string, defaultValue = false): boolean {
         this.totalCalls++;
         this.debouncedSync();
-        if (!this.inputs[id]) {
+        if (this.checkAndStoreSignature(id, { type: 'toggle' })) {
             this.inputs[id] = new ToggleInput(id, defaultValue);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof ToggleInput)) {
@@ -114,7 +114,7 @@ export class ParameterHandler {
     public button(id: string, callback: () => void): void {
         this.totalCalls++;
         this.debouncedSync();
-        if (this.checkAndStoreSignature(id, { callback: `${callback}` })) {
+        if (this.checkAndStoreSignature(id, { type: 'button', callback: `${callback}` })) {
             this.inputs[id] = new ButtonInput(id, callback);
         } else if (!(this.inputs[id] instanceof ButtonInput)) {
             throw new Error('Parameter with ID ' + id + ' is already in use and of a different type');
@@ -125,7 +125,7 @@ export class ParameterHandler {
     public slider(id: string, defaultValue: number, min: number, max: number, step: number = 1, liveUpdate = false): number {
         this.totalCalls++;
         this.debouncedSync();
-        if (this.checkAndStoreSignature(id, { min, max, step, liveUpdate })) {
+        if (this.checkAndStoreSignature(id, { type: 'slider', min, max, step, liveUpdate })) {
             this.inputs[id] = new SliderInput(this, id, defaultValue, min, max, step, liveUpdate);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof SliderInput)) {
@@ -138,7 +138,7 @@ export class ParameterHandler {
     public number(id: string, defaultValue: number, min?: number, max?: number, step?: number): number {
         this.totalCalls++;
         this.debouncedSync();
-        if (this.checkAndStoreSignature(id, { min, max, step })) {
+        if (this.checkAndStoreSignature(id, { type: 'number', min, max, step })) {
             this.inputs[id] = new NumberInput(id, defaultValue, min, max, step);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof NumberInput)) {
@@ -151,7 +151,7 @@ export class ParameterHandler {
     public color(id: string, defaultValue: string = "#000000", returnAsString: boolean = false): string | Color | ColorRGB {
         this.totalCalls++;
         this.debouncedSync();
-        if (this.checkAndStoreSignature(id, { returnAsString })) {
+        if (this.checkAndStoreSignature(id, { type: 'color', returnAsString })) {
             this.inputs[id] = new ColorPickerInput(this, id, defaultValue, returnAsString);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof ColorPickerInput)) {
@@ -164,7 +164,7 @@ export class ParameterHandler {
     public text(id: string, defaultValue: string = "", placeholder: string = ""): string {
         this.totalCalls++;
         this.debouncedSync();
-        if (this.checkAndStoreSignature(id, { placeholder })) {
+        if (this.checkAndStoreSignature(id, { type: 'text', placeholder })) {
             this.inputs[id] = new TextInput(id, defaultValue, placeholder);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof TextInput)) {
@@ -177,7 +177,7 @@ export class ParameterHandler {
     public select(id: string, options: string[], defaultIndex: number = 0): string {
         this.totalCalls++;
         this.debouncedSync();
-        if (this.checkAndStoreSignature(id, { options })) {
+        if (this.checkAndStoreSignature(id, { type: 'select', options })) {
             this.inputs[id] = new SelectInput(id, options, defaultIndex);
             this.inputs[id].setChangeListener(() => this.reactToChange());
         } else if (!(this.inputs[id] instanceof SelectInput)) {
@@ -187,9 +187,15 @@ export class ParameterHandler {
         return this.inputs[id].get() as string;
     }
 
+    /**
+     * Checks if the parameter signature (configuration) has changed or if the input needs to be (re-)created.
+     * 
+     * Returns `true` if the input should be created (because it's new, the signature changed, or the input instance is missing).
+     * Returns `false` if the existing input matches the signature and can be reused.
+     */
     private checkAndStoreSignature(id: string, signature: Object): boolean {
         const signatureString = JSON.stringify(signature);
-        if (this.inputSignatures[id] === signatureString) {
+        if (this.inputs[id] && this.inputSignatures[id] === signatureString) {
             return false;
         }
         this.inputSignatures[id] = signatureString;

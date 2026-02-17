@@ -29,6 +29,7 @@
             flex: 0 0 1;
             max-width: 45%;
             max-height: 40vh;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         #example-container {
@@ -113,6 +114,10 @@
             transform: scale(1.05);
             box-shadow: 0 0 8px #0066ff80;
             border-color: #0066ff;
+        }
+        #preview-container canvas.drop-target {
+            transform: scale(1.02);
+            box-shadow: 0 0 12px #0066ff80;
         }
         .image-slots-preview img {
             position: absolute;
