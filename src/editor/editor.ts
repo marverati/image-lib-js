@@ -90,6 +90,7 @@ window.addEventListener('load', async () => {
 
     setupDocumentation(document.querySelector(".help-overlay"));
     setupInteraction(targetCanvas);
+    setupClipboardPaste();
 
     const paramContent = document.querySelector("#parameter-content") as HTMLElement;
     const paramEmpty = document.querySelector("#parameter-empty-state") as HTMLElement;
@@ -612,6 +613,154 @@ function turnIntoImageDropTarget(div: HTMLElement, handleImage: (img: HTMLImageE
         extraContainer?.remove();
         extraContainer = null;
     }
+}
+
+// --- Clipboard paste modal ---
+
+let pasteModalActive = false;
+let pasteCleanupFns: (() => void)[] = [];
+
+function showPasteModal(img: HTMLImageElement, blobUrl: string) {
+    if (pasteModalActive) return;
+    pasteModalActive = true;
+
+    // 1. Dark overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'paste-overlay';
+    overlay.addEventListener('click', () => dismissPasteModal(blobUrl));
+    document.body.appendChild(overlay);
+
+    // 2. Elevate clickable targets
+    const elevated: HTMLElement[] = [];
+
+    function elevate(el: HTMLElement, label: string, destinationId: number) {
+        el.classList.add('paste-elevated');
+        elevated.push(el);
+        const labelEl = document.createElement('div');
+        labelEl.className = 'paste-label';
+        labelEl.textContent = label;
+        el.style.position = 'relative';
+        el.appendChild(labelEl);
+        const handler = (e: MouseEvent) => {
+            e.stopPropagation();
+            applyPasteToDestination(img, destinationId, blobUrl);
+        };
+        el.addEventListener('click', handler);
+        pasteCleanupFns.push(() => {
+            el.classList.remove('paste-elevated');
+            el.removeEventListener('click', handler);
+            labelEl.remove();
+        });
+    }
+
+    elevate(sourceCanvas, 'Source (0 / Enter)', 0);
+    elevate(targetCanvas, 'Target (Space)', -1);
+
+    const slotElements = document.querySelectorAll('#image-slots .image-slots-preview');
+    slotElements.forEach((slotEl, i) => {
+        elevate(slotEl as HTMLElement, `${i + 1}`, i + 1);
+    });
+
+    // 3. Floating modal with preview + instructions
+    const modal = document.createElement('div');
+    modal.className = 'paste-modal';
+
+    const preview = document.createElement('img');
+    preview.src = img.src;
+    modal.appendChild(preview);
+
+    const instructions = document.createElement('div');
+    instructions.className = 'paste-instructions';
+    instructions.innerHTML =
+        'Paste image to\u2026<br>' +
+        '<kbd>0</kbd> / <kbd>Enter</kbd> Source &nbsp; ' +
+        '<kbd>Space</kbd> Target &nbsp; ' +
+        '<kbd>1</kbd>\u2013<kbd>9</kbd> Slots &nbsp; ' +
+        '<kbd>Esc</kbd> Cancel';
+    modal.appendChild(instructions);
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'paste-cancel';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => dismissPasteModal(blobUrl));
+    modal.appendChild(cancelBtn);
+
+    document.body.appendChild(modal);
+
+    // 4. Keyboard handler
+    const keyHandler = (e: KeyboardEvent) => {
+        if (!pasteModalActive) return;
+        const code = e.code;
+        if (code === 'Escape') {
+            dismissPasteModal(blobUrl);
+        } else if (code === 'Enter' || code === 'Digit0') {
+            applyPasteToDestination(img, 0, blobUrl);
+        } else if (code === 'Space' || code === 'Minus') {
+            e.preventDefault();
+            applyPasteToDestination(img, -1, blobUrl);
+        } else if (code >= 'Digit1' && code <= 'Digit9') {
+            const slotId = parseInt(code.charAt(code.length - 1));
+            applyPasteToDestination(img, slotId, blobUrl);
+        }
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    pasteCleanupFns.push(
+        () => overlay.remove(),
+        () => modal.remove(),
+        () => document.removeEventListener('keydown', keyHandler),
+    );
+}
+
+function applyPasteToDestination(img: HTMLImageElement, destinationId: number, blobUrl: string) {
+    if (destinationId >= 1) {
+        storeImageInSlot(img, destinationId - 1);
+    } else {
+        applyImage(img, destinationId);
+    }
+    dismissPasteModal(blobUrl);
+}
+
+function dismissPasteModal(blobUrl: string) {
+    if (!pasteModalActive) return;
+    pasteModalActive = false;
+    for (const fn of pasteCleanupFns) fn();
+    pasteCleanupFns = [];
+    URL.revokeObjectURL(blobUrl);
+}
+
+function setupClipboardPaste() {
+    document.addEventListener('paste', (event: ClipboardEvent) => {
+        if (pasteModalActive) return;
+        const items = event.clipboardData?.items;
+        if (!items) return;
+
+        let imageItem: DataTransferItem | null = null;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                imageItem = items[i];
+                break;
+            }
+        }
+        if (!imageItem) return;
+
+        // If the editor textarea is focused and there's also text in the clipboard, let normal paste work
+        if (document.activeElement === editor && event.clipboardData.types.includes('text/plain')) return;
+
+        event.preventDefault();
+        const blob = imageItem.getAsFile();
+        if (!blob) return;
+
+        const blobUrl = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+            showPasteModal(img, blobUrl);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(blobUrl);
+        };
+        img.src = blobUrl;
+    });
 }
 
 function toggleDocuMode(docuMode = !document.body.classList.contains("docu-mode")) {
