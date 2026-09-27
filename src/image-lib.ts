@@ -2,9 +2,21 @@
 type CanvasType = any;
 type NodeImage = any;
 
-// Canvas functionality - will use browser APIs when available
+// Canvas functionality - will use browser APIs when available.
+// In Node.js, the optional "canvas" package (node-canvas) is used if it is installed.
 let createNodeCanvas: ((width: number, height: number) => CanvasType) | undefined;
 let NodeImageClass: any;
+if (typeof window === 'undefined') {
+    try {
+        // Indirect require so that browser bundlers don't try to resolve the Node-only package
+        const nodeRequire = eval('require');
+        const nodeCanvas = nodeRequire('canvas');
+        createNodeCanvas = nodeCanvas.createCanvas;
+        NodeImageClass = nodeCanvas.Image;
+    } catch (e) {
+        // node-canvas not installed: canvas-based methods will throw when used
+    }
+}
 import { Color, ColorRGB, ImageChannelFilter, ImageFilter, ImageGenerator, PixelMap } from "./PixelMap";
 
 // Re-export types that are used by other modules
@@ -265,7 +277,7 @@ export class RGBAPixelMap extends PixelMap<Color> {
         }
         return new RGBPixelMap(this.width, this.height, (x, y) => {
             const c = this.data[y][x];
-            const a = c[3], a1 = 1 - a;
+            const a = c[3] / 255, a1 = 1 - a;
             return [
                 a * c[0] + a1 * br,
                 a * c[1] + a1 * bg,
@@ -334,9 +346,8 @@ export class RGBPixelMap extends PixelMap<ColorRGB> {
     }
 
     public static fromImage(img: HTMLImageElement): RGBPixelMap {
-        const cnv = ImageLib.createCanvasFromImage(img);
-        const data = (cnv.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
-        return new RGBPixelMap(img.naturalWidth, img.naturalHeight, (x: number, y: number) => RGBPixelMap.fromColor(data[y][x]));
+        const rgba = RGBAPixelMap.fromImage(img);
+        return new RGBPixelMap(rgba.width, rgba.height, (x: number, y: number) => RGBPixelMap.fromColor(rgba.getFast(x, y)));
     }
 }
 
@@ -364,9 +375,8 @@ export class GrayscalePixelMap extends PixelMap<number> {
 
 
     public static fromImage(img: HTMLImageElement): GrayscalePixelMap {
-        const cnv = ImageLib.createCanvasFromImage(img);
-        const data = (cnv.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
-        return new GrayscalePixelMap(img.naturalWidth, img.naturalHeight, (x: number, y: number) => GrayscalePixelMap.fromColor(data[y][x]));
+        const rgba = RGBAPixelMap.fromImage(img);
+        return new GrayscalePixelMap(rgba.width, rgba.height, (x: number, y: number) => GrayscalePixelMap.fromColor(rgba.getFast(x, y)));
     }
 }
 
@@ -381,8 +391,7 @@ export class BoolPixelMap extends PixelMap<boolean> {
     public blend(a: boolean, b: boolean, f: number): boolean { return f > 0.5 ? b : a; }
 
     public static fromImage(img: HTMLImageElement): BoolPixelMap {
-        const cnv = ImageLib.createCanvasFromImage(img);
-        const data = (cnv.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, img.naturalWidth, img.naturalHeight).data;
-        return new BoolPixelMap(img.naturalWidth, img.naturalHeight, (x: number, y: number) => BoolPixelMap.fromColor(data[y][x]));
+        const rgba = RGBAPixelMap.fromImage(img);
+        return new BoolPixelMap(rgba.width, rgba.height, (x: number, y: number) => BoolPixelMap.fromColor(rgba.getFast(x, y)));
     }
 }

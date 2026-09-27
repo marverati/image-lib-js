@@ -219,8 +219,11 @@ export abstract class PixelMap<T> {
     }
 
     resizeSmooth(width: number, height: number): PixelMap<T> {
-        const sx = width / this.width, sy = height / this.height;
-        return this.scaleSmooth(sx, sy);
+        // Smooth scaling only helps when shrinking by more than 2x, otherwise regular resizing is equally good
+        if (width >= this.width / 2 && height >= this.height / 2) {
+            return this.resize(width, height);
+        }
+        return this.resizeAveraged(width, height);
     }
 
     scale(scaleX: number, scaleY = scaleX): PixelMap<T> {
@@ -234,10 +237,35 @@ export abstract class PixelMap<T> {
         if (scaleX >= 0.5 && scaleY >= 0.5) {
             return this.scale(scaleX, scaleY);
         }
-        // Sufficient shrinking required to split into multiple steps
-        // We perform one scaling step limited to 2x, followed by a ~recursive call to smooth scaling for the rest
-        const sx = Math.max(scaleX, 0.5), sy = Math.max(scaleY, 0.5);
-        return this.scale(sx, sy).scaleSmooth(scaleX / sx, scaleY / sy);
+        const w = Math.max(1, Math.round(this.width * scaleX));
+        const h = Math.max(1, Math.round(this.height * scaleY));
+        return this.resizeAveraged(w, h);
+    }
+
+    /**
+     * Resizes using a box filter: every target pixel is the area-weighted average of all source pixels it covers,
+     * so no source pixel gets skipped, no matter how much the image shrinks.
+     */
+    private resizeAveraged(width: number, height: number): PixelMap<T> {
+        const fx = this.width / width, fy = this.height / height;
+        return this.clone(width, height).fill((x, y) => {
+            const x0 = x * fx, x1 = x0 + fx, y0 = y * fy, y1 = y0 + fy;
+            let result: T = this.data[Math.floor(y0)][Math.floor(x0)];
+            let totalWeight = 0;
+            for (let sy = Math.floor(y0); sy < y1 && sy < this.height; sy++) {
+                const wy = Math.min(y1, sy + 1) - Math.max(y0, sy);
+                for (let sx = Math.floor(x0); sx < x1 && sx < this.width; sx++) {
+                    const weight = wy * (Math.min(x1, sx + 1) - Math.max(x0, sx));
+                    if (weight <= 0) {
+                        continue;
+                    }
+                    totalWeight += weight;
+                    // Running weighted average, using blend() so that this works for any pixel type
+                    result = this.blend(result, this.data[sy][sx], weight / totalWeight);
+                }
+            }
+            return result;
+        });
     }
 
     abstract clone(width?: number, height?: number): PixelMap<T>;

@@ -160,10 +160,9 @@ Built-in examples are functions in `src/editor/examples_raw.js`, and public scri
 
 ## Running the example scripts in Node
 
-The scripts in `src/examples/` also run outside the browser. They use [`node-canvas`](https://github.com/Automattic/node-canvas) for image I/O. It isn't listed in `package.json`, so install it first:
+The scripts in `src/examples/` also run outside the browser. They use [`node-canvas`](https://github.com/Automattic/node-canvas) for image I/O. It's an optional dependency: `npm install` fetches it when a prebuilt version exists for your platform, and carries on without it otherwise.
 
 ```sh
-npm install canvas
 npx ts-node src/examples/example_gen_perlin.ts
 ```
 
@@ -180,9 +179,18 @@ This writes a standalone editor to `dist/editor/`. It uses relative paths only, 
 ## Tests
 
 ```sh
-npm test            # Jest unit tests (pixel maps, color utilities, interpolation)
-npm run test:e2e    # Playwright tests against the editor; starts the dev server itself
+npm test            # Jest unit tests, in src/**/test/
+npm run test:e2e    # Playwright tests in e2e/, against the editor (starts the dev server itself)
+npm run test:all    # both
 ```
+
+The unit tests cover the library (pixel maps, generating, filtering, combining, scaling), the color and noise utilities, and the editor's URL handling. The tests that go through a real canvas need `node-canvas` and are skipped if it isn't installed.
+
+The e2e tests drive the editor in Chromium. They run code snippets and check the resulting pixels, and they cover the file tree, parameters, deep links, drag and drop, and pasting. They also run every built-in example and public script and fail if any of them throws.
+
+The first e2e run needs a browser: `npx playwright install chromium`.
+
+GitHub runs both suites on every push and pull request (see `.github/workflows/tests.yml`). Results show up in the *Actions* tab and as checks on pull requests.
 
 ## License
 

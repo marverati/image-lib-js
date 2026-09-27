@@ -75,14 +75,7 @@ describe('ColorGradient', () => {
         });
     });
 
-    describe('toImage', () => {
-        test('should create image with correct dimensions', () => {
-            const gradient = new ColorGradient(() => rgbaColor);
-            const image = gradient.toImage(10, 5);
-            expect(image.width).toBe(10);
-            expect(image.height).toBe(5);
-        });
-    });
+    // toImage needs a canvas and is tested in src/test/canvas.test.ts
 
     describe('static uniform', () => {
         test('should create gradient with correct interpolation', () => {

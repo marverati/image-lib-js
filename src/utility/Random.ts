@@ -61,7 +61,7 @@ export class Random {
      * @param max - The maximum value (exclusive). Default is 1.
      * @returns A random floating-point number between min and max.
      */
-    public uniform(from: number = 0, to: number = 0): number {
+    public uniform(from: number = 0, to: number = 1): number {
         return from + this.random() * (to - from);
     }
 
